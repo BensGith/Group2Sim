@@ -1,9 +1,12 @@
 import numpy as np
+import Event
+import Elevator
 
 
 class Simulation:
     def __init__(self):
         self.sim = 0
+        self.time = 0  # simulation clock
 
     def get_arrival_rate(self, time_of_day):
         """
@@ -34,3 +37,29 @@ class Simulation:
         :return: day of simulation (0,1..9)
         """
         return int(time // (24 * 60))
+
+    def arriving(self, event):
+        client = event.client
+        current_floor = client.current_floor
+        arrival_time = event.time
+        desired_floor = client.desired_floor
+        if client.abandon(self.time):
+            pass
+            # client.leave_system
+        if event.client.need_swap:
+            self.swap_elevator()
+        else:
+            self.leaving(event.client)
+
+    def swap_elevator(self):
+        pass
+
+    def leaving(self, client):
+        ride_time = Elevator.ride_time(client.current_floor, client.desired_floor)
+        
+
+
+
+
+
+
