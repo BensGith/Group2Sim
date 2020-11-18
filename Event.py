@@ -1,8 +1,11 @@
 class Event:
-    def __init__(self, time, event_type, client):
+    def __init__(self, time, event_type, floor, elevator):
         self.time = time
         self.event_type = event_type
-        self.client = client
+        self.floor = floor
+        self.elevator = elevator
+
+
 
     def __lt__(self, other):
         return self.time < other.time

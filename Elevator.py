@@ -10,6 +10,7 @@ class Elevator:
         self.is_stuck = False
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
+        self.up = True
 
         if not self.saturday and self.number <= 2:  # elevators 1,2
             self.next_floors = set([i for i in range(16)])
@@ -51,11 +52,18 @@ class Elevator:
 
     def remove_client(self, client):
         self.clients.remove(client)
-        self.capacity -=1
+        self.capacity -= 1
 
     def board_clients(self, clients_lst):
         self.clients += clients_lst
         self.capacity += len(clients_lst)
+        for client in clients_lst:
+            pass
+            # push leaving event to
+
+    def update_clients_time(self, time):
+        for client in self.clients:
+            client.add_wait_time(time)  # add client waiting in floor and total
 
     @staticmethod
     def ride_time(floor1, floor2):
