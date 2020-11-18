@@ -54,15 +54,38 @@ class Simulation:
             pass
             # client.leave_system
         if event.client.need_swap:
-            self.swap_elevator()
-        else:
-            self.leaving(event.client)
+            pass
+        # if current_floor== elevator.floor:
+        # capacity+=1
+        # self.swap_elevator()
+        # if current_floor== elevator.floor:
+        # # capacity+=1
+        # remove all until capcaity full and create leaving
+        # else:
+        # push to current_floor_line_heap
+        # create arriving
 
-    def swap_elevator(self):
+    def swap_elevator(self,client):
+        # change client
         pass
 
     def leaving(self, client):
+        pass
+        # if elevator stucked (probability)
+        # create control, is stuck=true, floor=desired_floor
+        # else:
+        #capacity-=1
         ride_time = Elevator.ride_time(client.current_floor, client.desired_floor)
+        # Elevator.floor=client.desired_floor
+        # go to desired_floor heap remove all until capcaity full and create leaving
+
+    def control(self,floor):
+        pass
+    # stuck=false
+    # add time to fix etc self.time = ending fixing time uniform(5,15) min
+    # fo to floor's and heap remove all until capcaity full and create leaving
+
+
 
 
     def run(self):
