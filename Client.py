@@ -6,4 +6,7 @@ class Client:
     def abandon(self):
         return self.time_in_sys > 15 * 60
 
+    def is_angry(self):
+        return True
+
 
