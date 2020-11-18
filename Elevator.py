@@ -25,11 +25,12 @@ class Elevator:
     def stuck(self):
         """
         method to randomize Elevator getting stuck
-        :return:
+        :return: boolean
         """
         if random.random(1) <= 0.0005:
             self.is_stuck = True
             return True
+        return False
 
     def fix_elevator(self):
         self.is_stuck = False
@@ -41,12 +42,20 @@ class Elevator:
         """
         return self.capacity == 15
 
-    def board_clients(self):
+    def free_space(self):
         """
         calculate how many clients can board the Elevator
         :return: int
         """
-        return len(self.clients) - self.capacity
+        return 15 - self.capacity
+
+    def remove_client(self, client):
+        self.clients.remove(client)
+        self.capacity -=1
+
+    def board_clients(self, clients_lst):
+        self.clients += clients_lst
+        self.capacity += len(clients_lst)
 
     @staticmethod
     def ride_time(floor1, floor2):

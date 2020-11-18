@@ -9,10 +9,25 @@ class Client:
         else:
             self.need_swap = False
 
+    def __repr__(self):
+        return "Client system time {}, floor time {}".format(self.time_in_sys, self.floor_time)
+
     def __lt__(self, other):
         return self.floor_time < other.floor_time
 
     def abandon(self):
-        return self.time_in_sys > 15 * 60
+        return self.time_in_sys > 15 * 60  # abandon if waiting more than 15 minutes
+
+    def add_wait_time(self, time):
+        self.time_in_sys += time
+        self.floor_time += time
 
 
+if __name__ == "__main__":
+    lst1 = [Client(0, 1), Client(0, 2)]
+    c = lst1[0]
+    lst1.remove(c)
+    lst2 =[]
+    lst2.append(c)
+    print(lst1)
+    print(lst2)
