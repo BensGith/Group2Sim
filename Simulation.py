@@ -1,12 +1,19 @@
 import numpy as np
+import heapq as hpq
 import Event
-import Elevator
+from Floor import Floor
+from Elevator import Elevator
+
+# Assumption - the line in the floor is determined by time spent in floor
 
 
 class Simulation:
     def __init__(self):
         self.sim = 0
         self.time = 0  # simulation clock
+        self.floors = [Floor(i) for i in range(26)]
+        self.elevators = [Elevator(i) for i in range(1, 5)]
+        self.events = []
 
     def get_arrival_rate(self, time_of_day):
         """
@@ -30,7 +37,7 @@ class Simulation:
         # will serve as i,j for system_history
         return int((time // 60) % 24)
 
-    def find_day(self,time):
+    def find_day(self, time):
         """
         get the day number of simulation
         :param time: curr_time, simulation clock
@@ -56,10 +63,8 @@ class Simulation:
 
     def leaving(self, client):
         ride_time = Elevator.ride_time(client.current_floor, client.desired_floor)
-        
 
 
-
-
-
+    def run(self):
+        event = Event()
 
