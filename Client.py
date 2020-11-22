@@ -1,5 +1,6 @@
 class Client:
-    def __init__(self, current_floor, desired_floor):
+    def __init__(self, current_floor, desired_floor, arrival_time):
+        self.arrival_time = arrival_time
         self.desired_floor = desired_floor
         self.time_in_sys = 0
         self.floor_time = 0
@@ -21,6 +22,14 @@ class Client:
     def add_wait_time(self, time):
         self.time_in_sys += time
         self.floor_time += time
+
+    def travel(self, time):
+        """
+        call this method when client travels in the Elevator
+        :return: None
+        """
+        self.time_in_sys += time
+        self.floor_time = 0
 
 
 if __name__ == "__main__":

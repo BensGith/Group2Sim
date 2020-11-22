@@ -15,19 +15,28 @@ class Floor:
         hpq.heappush(self.line, client)
         self.n_clients += 1
 
+    def update_client_time(self, time):
+        for client in self.clients:
+            client.add_wait_time(time)
+
     def drop_clients(self, elevator):
         """
         method to drop clients in matching floor
         :param elevator: Elevator object
         :return: None
         """
+        dropped = 0
+        leaving = []
         for client in elevator.clients:
             if self.number == client.desired_floor:  # client reached desired floor
-                elevator.remove_client(client)  # remove from system
+                leaving.append(client)
+                dropped += 1
 
             elif elevator.saturday and client.desired_floor not in elevator.next_floors and self.number == 0:
                 hpq.heappush(self.line, client)  # add client to queue
-                elevator.remove_client(client)  # remove client from elevator
+                leaving.append(client)
+        elevator.remove_clients(leaving)  # remove from system
+        return dropped
 
     def board_clients(self, elevator):
         """
@@ -52,8 +61,6 @@ class Floor:
             for client in staying:
                 hpq.heappush(self.line, client)  # push clients back to line
         elevator.board_clients(boarding)  # board clients to elevator
-
-
 
 
 if __name__ == "__main__":
