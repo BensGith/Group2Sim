@@ -6,16 +6,35 @@ class Client:
         self.floor_time = 0
         self.travelling = False
         self.current_floor = current_floor
+        self.direction = None
         if (current_floor <= 15 and desired_floor >= 16) or (current_floor >= 15 and desired_floor <= 16):
-            self.need_swap = True
+            self.need_swap = True  # use for ordering elevators in Simulation
         else:
-            self.need_swap = False
+            self.need_swap = False  # use for ordering elevators in Simulation (will order it to go to 0)
+        if not self.need_swap:
+            if self.current_floor < self.desired_floor:
+                self.direction = True
+            elif self.current_floor > self.desired_floor:
+                self.direction = False
+        else:  # need swap, take any elevator going down
+            self.direction = False
+
+
+
 
     def __repr__(self):
         return "Client system time {}, floor time {}".format(self.time_in_sys, self.floor_time)
 
     def __lt__(self, other):
         return self.floor_time < other.floor_time
+
+    def update_direction(self):
+        if self.current_floor < self.desired_floor:
+            self.direction = True
+        elif self.current_floor > self.desired_floor:
+            self.direction = False
+
+
 
     def abandon(self):
         # check if client inside elevator

@@ -40,10 +40,10 @@ class Floor:
             if self.number == client.desired_floor:  # client reached desired floor
                 leaving.append(client)
                 dropped += 1
-
-            elif elevator.saturday and client.desired_floor not in elevator.next_floors and self.number == 0:
+            elif client.desired_floor not in elevator.service_floors and self.number == 0:  # go off elevator for swap
                 hpq.heappush(self.line, client)  # add client to queue
                 leaving.append(client)
+                client.current_floor = 0  # update client's current floor to 0
         elevator.remove_clients(leaving)  # remove from system
         return dropped
 
@@ -57,18 +57,20 @@ class Floor:
 
         while self.line or len(boarding) == elevator.free_space():  # stop boarding people if line is empty or 15 inside
             client = hpq.heappop(self.line)
-            # on saturday mode, client will board ANY elevator
-            if elevator.saturday:  # need swap
+            # if client needs a swap, he will take any elevator down
+            if client.need_swap and not elevator.up:
                 boarding.append(client)
+                client.need_swap = False
                 self.n_clients -= 1  # update number of staying in the floor
-            elif client.desired_floor in elevator.next_floors:  # also for swap on 15th floor
+            elif elevator.up == client.direction and client.desired_floor in elevator.service_floors:
                 boarding.append(client)
                 self.n_clients -= 1  # update number of staying in the floor
             else:
                 staying.append(client)
         if staying:
             for client in staying:
-                hpq.heappush(self.line, client)  # push clients back to line
+                self.line.append(client)  # push clients back to line
+            hpq.heapify(self.line)  # reorder line
         elevator.board_clients(boarding)  # board clients to elevator
 
 

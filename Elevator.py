@@ -81,9 +81,15 @@ class Elevator:
                 self.up = not self.up
             if self.up:
                 self.floor += 1
-            else:
+                travel_time = 5
+            elif not self.up and self.floor != 16:  # go down from 16 to 0
                 self.floor -= 1
-            travel_time = 5
+                travel_time = 5
+            else:
+                self.floor = 0
+                travel_time = 20  # travel from 16 to 0
+            for client in self.clients:
+                client.travel()  # set client to travelling with floor_time 0
         else:
             if self.up:
                 next_floor = hpq.heappop(self.up_queue)

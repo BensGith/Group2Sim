@@ -74,14 +74,17 @@ class Simulation:
                 break  # open just one Elevator
         # passengers board on door CLOSE event, take whoever wants to board before they close!
         if not service:  # client did not board elevator
-            direction = None
-            if client.current_floor > client.desired_floor:
-                direction = "down"
-            elif client.current_floor < client.desired_floor:
-                direction = "up"
             if not self.saturday:  # can't order the elevator on Saturday mode
                 # order an elevator to client's floor
-                self.order_elevator(current_floor, direction, client.desired_floor)
+                if client.need_swap:
+                    self.order_elevator(current_floor, "down", 0)
+                else:
+                    direction = None
+                    if client.current_floor > client.desired_floor:
+                        direction = "down"
+                    elif client.current_floor < client.desired_floor:
+                        direction = "up"
+                    self.order_elevator(current_floor, direction, client.desired_floor)
         if self.curr_time < self.simulation_time:
             hpq.heappush(self.events, Event(self.curr_time, "arriving"))
 
@@ -97,6 +100,7 @@ class Simulation:
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator]
         left_sys = floor.drop_clients(elevator)  # update Simulation metrics?
+        self.total_clients -= left_sys
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
             hpq.heappush(self.events, Event(self.curr_time + time_to_fix, "elevator fix",
@@ -176,7 +180,7 @@ class Simulation:
         hpq.heappush(self.events, Event(self.curr_time, "arriving"))
         for i in range(100):
             # reset simulation
-            while self.events:
+            while self.total_clients > 0 or self.curr_time < self.simulation_time:
                 prv_event = None
                 prv_minute = None
                 current_minute = None
