@@ -81,7 +81,7 @@ class Simulation:
                 direction = "up"
             if not self.saturday:  # can't order the elevator on Saturday mode
                 self.order_elevator(current_floor, direction)  # order an elevator to client's floor
-        if self.curr_time< self.simulation_time:
+        if self.curr_time < self.simulation_time:
             hpq.heappush(self.events, Event(self.curr_time, "arriving"))
 
     def door_close(self, event):
@@ -184,3 +184,9 @@ class Simulation:
                     self.door_close(event)
                 # update  system time for clients
 
+
+if __name__ == "main":
+    sat_sim = Simulation(True)  # saturday
+    sat_sim.run()
+    reg_sim = Simulation()
+    reg_sim.run()

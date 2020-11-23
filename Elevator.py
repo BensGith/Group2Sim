@@ -96,7 +96,6 @@ class Elevator:
             travel_time = 4 + abs(self.floor - next_floor)
         for client in self.clients:
             client.travel()
-
         return travel_time
 
     @staticmethod
