@@ -80,7 +80,8 @@ class Simulation:
             elif client.current_floor < client.desired_floor:
                 direction = "up"
             if not self.saturday:  # can't order the elevator on Saturday mode
-                self.order_elevator(current_floor, direction)  # order an elevator to client's floor
+                # order an elevator to client's floor
+                self.order_elevator(current_floor, direction, client.desired_floor)
         if self.curr_time < self.simulation_time:
             hpq.heappush(self.events, Event(self.curr_time, "arriving"))
 
@@ -89,7 +90,8 @@ class Simulation:
         elevator = self.elevators[event.elevator]
         floor.board_clients(elevator)  # add clients that arrived before door closing
         travel_time = event.elevator.travel()  # pops floor from queue and moves the elevator to next floor
-        hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open"))
+        # elevator.floor is the new floor the elevator reached
+        hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open", elevator.floor, elevator.number))
 
     def door_open(self, event):
         floor = self.floors[event.floor]
@@ -101,17 +103,18 @@ class Simulation:
                                             floor.number,
                                             elevator.number))
         else:
-            hpq.heappush(self.events, Event(self.curr_time + 5, "door close"))
+            hpq.heappush(self.events, Event(self.curr_time + 5, "door close", elevator.floor, elevator.number))
 
     def elevator_fix(self, event):
         elevator = event.elevator
         self.elevators[elevator].fix_elevator()
-        hpq.heappush(self.events, Event(self.curr_time, "door open"))
+        hpq.heappush(self.events, Event(self.curr_time, "door open", event.floor, event.elevator))
 
-    def order_elevator(self, floor, direction):
+    def order_elevator(self, floor, direction, desired_floor):
         """
         find closest elevator and add the floor desired to its queue
         :param floor: floor the client wants to go from
+        :param desired_floor: floor the client wants to go to
         :param direction: "up" or "down"
         :return: None
         """
@@ -143,9 +146,13 @@ class Simulation:
         if direction == "down":
             # mul floor by -1 chosen elevators queue, because of down queue takes out the min floor, we need the max one
             self.elevators[candidate_elevator].add_to_queue(floor * (-1), direction)
+            # add target floor to queue
+            self.elevators[candidate_elevator].add_to_queue(desired_floor * (-1), direction)
         else:  # direction is up
             self.elevators[candidate_elevator].add_to_queue(floor,
                                                             direction)  # add floor to chosen elevators queue
+            # add target floor to queue
+            self.elevators[candidate_elevator].add_to_queue(desired_floor * (-1), direction)
 
     def update_times(self, event_time, prv_event_time):
         for floor in self.floors:
