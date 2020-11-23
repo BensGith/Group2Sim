@@ -120,7 +120,7 @@ class Simulation:
         # just add the number of floors it has left to 25 and add 25- desired
         # avoid ordering if elevator present in floor
         closest = 999
-        candidate_elevator = None
+        candidate_elevator = 0
         for elevator in self.elevators:
             if elevator.is_stuck or (floor not in elevator.service_floors):  # can't order that elevator
                 continue
