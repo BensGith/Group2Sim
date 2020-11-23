@@ -81,7 +81,8 @@ class Simulation:
                 direction = "up"
             if not self.saturday:  # can't order the elevator on Saturday mode
                 self.order_elevator(current_floor, direction)  # order an elevator to client's floor
-        hpq.heappush(self.events, Event(self.curr_time, "arriving"))
+        if self.curr_time< self.simulation_time:
+            hpq.heappush(self.events, Event(self.curr_time, "arriving"))
 
     def door_close(self, event):
         floor = self.floors[event.floor]
@@ -164,7 +165,8 @@ class Simulation:
         curr_time = self.generate_client_arrival()
         hpq.heappush(self.events, Event(self.curr_time, "arriving"))
         for i in range(100):
-            while self.curr_time < self.simulation_time:
+            # reset simulation
+            while self.events:
                 prv_event = None
                 prv_minute = None
                 current_minute = None
