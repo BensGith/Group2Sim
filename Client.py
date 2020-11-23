@@ -25,7 +25,6 @@ class Client:
     def __lt__(self, other):
         return self.floor_time < other.floor_time
 
-
     def abandon(self):
         # check if client inside elevator
         return self.time_in_sys > 15 * 60  # abandon if waiting more than 15 minutes

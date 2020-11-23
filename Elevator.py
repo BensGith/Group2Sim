@@ -65,6 +65,8 @@ class Elevator:
         self.doors_open = True
         for client in clients_lst:
             client.travelling = False
+            client.floor_time = 0
+            client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
         self.capacity -= len(clients_lst)
 

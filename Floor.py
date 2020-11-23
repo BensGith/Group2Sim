@@ -43,8 +43,10 @@ class Floor:
             elif client.desired_floor not in elevator.service_floors and self.number == 0:  # go off elevator for swap
                 hpq.heappush(self.line, client)  # add client to queue
                 leaving.append(client)
-                client.current_floor = 0  # update client's current floor to 0
-        elevator.remove_clients(leaving)  # remove from system
+                self.line.append(client)
+        if dropped > 0:
+            hpq.heapify(self.line)
+            elevator.remove_clients(leaving)  # remove from system
         return dropped
 
     def board_clients(self, elevator):
@@ -60,10 +62,12 @@ class Floor:
             # if client needs a swap, he will take any elevator down
             if client.need_swap and not elevator.up:
                 boarding.append(client)
+                client.travelling = True
                 client.need_swap = False
                 self.n_clients -= 1  # update number of staying in the floor
             elif elevator.up == client.direction and client.desired_floor in elevator.service_floors:
                 boarding.append(client)
+                client.travelling = True
                 self.n_clients -= 1  # update number of staying in the floor
             else:
                 staying.append(client)
