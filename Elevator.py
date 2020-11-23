@@ -15,6 +15,7 @@ class Elevator:
         self.down_queue = []  # push floors to queue with *-1 to maintain hpq pulling the max element, Simulation pushes
         self.doors_open = False
         self.up = True
+        self.orders = set()  # keeps track of orders being made
 
         if self.number <= 2:  # elevators 1,2
             self.service_floors = set([i for i in range(16)])
@@ -39,10 +40,12 @@ class Elevator:
         self.is_stuck = False
 
     def add_to_queue(self, floor, direction):
-        if direction == "up":
-            self.up_queue.append(floor)
-        else:
-            self.down_queue.append(floor)
+        if abs(floor) not in self.orders:  # avoid negative numbers, use abs()
+            if direction == "up":
+                self.up_queue.append(floor)
+            else:
+                self.down_queue.append(floor)
+            self.orders.add(abs(floor))  # add to set
 
     def is_full(self):
         """
@@ -88,16 +91,16 @@ class Elevator:
             else:
                 self.floor = 0
                 travel_time = 20  # travel from 16 to 0
-            for client in self.clients:
-                client.travel()  # set client to travelling with floor_time 0
         else:
             if self.up:
                 next_floor = hpq.heappop(self.up_queue)
+
             else:
                 next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
+                self.orders.remove(next_floor)
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
-            if next_floor in (0, 25) or (bool(self.up_queue) != bool(self.down_queue)):
+            if next_floor in (0, 16, 25) or (bool(self.up_queue) != bool(self.down_queue)):
                 self.up = not self.up  # flip elevator direction
             travel_time = 4 + abs(self.floor - next_floor)
         for client in self.clients:

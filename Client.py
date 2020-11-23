@@ -19,21 +19,11 @@ class Client:
         else:  # need swap, take any elevator going down
             self.direction = False
 
-
-
-
     def __repr__(self):
         return "Client system time {}, floor time {}".format(self.time_in_sys, self.floor_time)
 
     def __lt__(self, other):
         return self.floor_time < other.floor_time
-
-    def update_direction(self):
-        if self.current_floor < self.desired_floor:
-            self.direction = True
-        elif self.current_floor > self.desired_floor:
-            self.direction = False
-
 
 
     def abandon(self):
@@ -49,6 +39,8 @@ class Client:
     def travel(self):
         self.travelling = True
         self.floor_time = 0
+
+
 if __name__ == "__main__":
     lst1 = [Client(0, 1), Client(0, 2)]
     c = lst1[0]

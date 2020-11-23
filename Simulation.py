@@ -73,7 +73,7 @@ class Simulation:
                 service = True
                 break  # open just one Elevator
         # passengers board on door CLOSE event, take whoever wants to board before they close!
-        if not service:  # client did not board elevator
+        if not service:  # no present elevator
             if not self.saturday:  # can't order the elevator on Saturday mode
                 # order an elevator to client's floor
                 if client.need_swap:
@@ -91,6 +91,7 @@ class Simulation:
     def door_close(self, event):
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator]
+        elevator.doors_open = False
         floor.board_clients(elevator)  # add clients that arrived before door closing
         travel_time = event.elevator.travel()  # pops floor from queue and moves the elevator to next floor
         # elevator.floor is the new floor the elevator reached
@@ -99,6 +100,7 @@ class Simulation:
     def door_open(self, event):
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator]
+        elevator.doors_open = True
         left_sys = floor.drop_clients(elevator)  # update Simulation metrics?
         self.total_clients -= left_sys
         if elevator.stuck():
