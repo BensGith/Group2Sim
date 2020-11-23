@@ -32,16 +32,6 @@ class Simulation:
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
 
-    def get_arrival_rate(self, time_of_day):
-        """
-        return time between arrivals, depending on the hour
-        :param time_of_day:
-        :return: time between arrivals
-        """
-        if 7 <= time_of_day <= 23:
-            return np.random.exponential(1)  # 1 min space between arrivals, 60 people an hour
-        return np.random.exponential(2)  # 2 min space between arrivals, 30 people an hour
-
     def find_hour(self, time):
         """
         function returns which hour of the day is it
@@ -61,13 +51,6 @@ class Simulation:
         :return: day of simulation (0,1..9)
         """
         return int(time // (24 * 60))
-
-    def generate_elevator_arrival_time(self):
-        """
-        generate a random time for the elevator to arrive
-        :return:
-        """
-        return 1
 
     def generate_client_arrival(self):
         """
@@ -89,61 +72,40 @@ class Simulation:
                 hpq.heappush(self.events, Event(self.curr_time, "door open", current_floor, elevator.number))
                 service = True
                 break  # open just one Elevator
-        if not service:
+        # passengers board on door CLOSE event, take whoever wants to board before they close!
+        if not service:  # client did not board elevator
             direction = None
             if client.current_floor > client.desired_floor:
                 direction = "down"
             elif client.current_floor < client.desired_floor:
                 direction = "up"
-            self.order_elevator(current_floor, direction)  # order an elevator to client's floor
+            if not self.saturday:  # can't order the elevator on Saturday mode
+                self.order_elevator(current_floor, direction)  # order an elevator to client's floor
         hpq.heappush(self.events, Event(self.curr_time, "arriving"))
 
     def door_close(self, event):
-        travel_time = event.elevator.ride_time()  # pops floor from queue and moves the elevator to next floor
+        floor = self.floors[event.floor]
+        elevator = self.elevators[event.elevator]
+        floor.board_clients(elevator)  # add clients that arrived before door closing
+        travel_time = event.elevator.travel()  # pops floor from queue and moves the elevator to next floor
         hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open"))
 
     def door_open(self, event):
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator]
-        left_sys = floor.drop_clients(elevator)
-        hpq.heappush(self.events, Event(self.curr_time + 5, "door close"))
-        floor = event.floor
-        elevator = event.elevator
-
-        # floor.drop
-        # floor.board
+        left_sys = floor.drop_clients(elevator)  # update Simulation metrics?
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
-            hpq.heappush(self.events, Event(self.curr_time + time_to_fix, "elevator fix"))
-            # floor.drop
-            pass
+            hpq.heappush(self.events, Event(self.curr_time + time_to_fix, "elevator fix",
+                                            floor.number,
+                                            elevator.number))
         else:
-            pass
-            # push door open event
+            hpq.heappush(self.events, Event(self.curr_time + 5, "door close"))
 
     def elevator_fix(self, event):
+        elevator = event.elevator
+        self.elevators[elevator].fix_elevator()
         hpq.heappush(self.events, Event(self.curr_time, "door open"))
-
-    # def leaving(self, client, elevator):
-    #     self.total_clients -= 1
-    #
-    #     if elevator.stuck():
-    #         time_to_fix = Elevator.get_fix_time()
-    #         # push control event to heap
-    #     # create control, is stuck=true, floor=desired_floor
-    #     # else:
-    #     # capacity-=1
-    #     ride_time = Elevator.ride_time(client.current_floor, client.desired_floor)
-    #     # Elevator.floor=client.desired_floor
-    #     # go to desired_floor heap remove all until capcaity full and create leaving
-
-    def control(self, elevator):
-        elevator.fix_elevator()
-        # push leaving
-
-    # stuck=false
-    # add time to fix etc self.time = ending fixing time uniform(5,15) min
-    # fo to floor's and heap remove all until capcaity full and create leaving
 
     def order_elevator(self, floor, direction):
         """
@@ -159,12 +121,15 @@ class Simulation:
         closest = 999
         candidate_elevator = None
         for elevator in self.elevators:
+            if elevator.is_stuck or (floor not in elevator.service_floors):  # can't order that elevator
+                continue
             score = 999
             if elevator.up:  # elevator moving up
                 if elevator.floor < floor:  # client is above elevator
                     score = floor - elevator.floor
                 elif elevator.floor > floor:  # elevator passed the floor
-                    score = (25-elevator.floor) + (25-floor)  # first is distance to top, second is from top to request
+                    score = (25 - elevator.floor) + (
+                            25 - floor)  # first is distance to top, second is from top to request
             else:  # elevator going down
                 if elevator.floor > floor:  # client is below elevator
                     score = elevator.floor - floor
@@ -173,23 +138,47 @@ class Simulation:
             if score < closest:
                 closest = elevator.floor - floor
                 candidate_elevator = elevator.number
+
         if direction == "down":
             # mul floor by -1 chosen elevators queue, because of down queue takes out the min floor, we need the max one
-            self.elevators[candidate_elevator].add_to_queue(floor*(-1), direction)
-        else:
+            self.elevators[candidate_elevator].add_to_queue(floor * (-1), direction)
+        else:  # direction is up
             self.elevators[candidate_elevator].add_to_queue(floor,
                                                             direction)  # add floor to chosen elevators queue
-        # add to next floors set?
+
+    def update_times(self, event_time, prv_event_time):
+        for floor in self.floors:
+            abandon = False
+            for client in floor.line:
+                if not client.travelling:
+                    if client.abandon():
+                        self.abandoned += 1
+                        abandon = True
+                        floor.remove_from_line(client)
+                    client.add_wait_time(event_time - prv_event_time)
+                client.add_system_time(event_time - prv_event_time)
+            if abandon:
+                floor.order_line()  # reorder floor line if clients left
 
     def run(self):
+        curr_time = self.generate_client_arrival()
+        hpq.heappush(self.events, Event(self.curr_time, "arriving"))
         for i in range(100):
             while self.curr_time < self.simulation_time:
+                prv_event = None
+                prv_minute = None
+                current_minute = None
+                event_time = 2
+                prv_event_time = 1
                 event = hpq.heappop(self.events)
+                self.update_times(event_time, prv_event_time)
                 if event.event_type == "arriving":
-                    self.arriving(event)
+                    self.arriving()
                 elif event.event_type == "door open":
                     self.door_open(event)
                 elif event.event_type == "elevator fix":
                     self.elevator_fix(event)
                 elif event.event_type == "door close":
                     self.door_close(event)
+                # update  system time for clients
+

@@ -16,13 +16,11 @@ class Elevator:
         self.doors_open = False
         self.up = True
 
-        if not self.saturday and self.number <= 2:  # elevators 1,2
-            self.next_floors = set([i for i in range(16)])
-        elif not self.saturday and self.number > 2:
-            self.next_floors = set([i for i in range(16, 26)])  # elevators 3,4
-            self.next_floors.add(0)
-        else:
-            self.next_floors = set()
+        if self.number <= 2:  # elevators 1,2
+            self.service_floors = set([i for i in range(16)])
+        elif self.number > 2:  # elevators 3,4
+            self.service_floors = set([i for i in range(16, 26)])
+            self.service_floors.add(0)
 
     def __repr__(self):
         return "Elevator {}, {} clients at floor {}".format(self.number, self.capacity, self.floor)
@@ -63,39 +61,43 @@ class Elevator:
     def remove_clients(self, clients_lst):
         self.doors_open = True
         for client in clients_lst:
+            client.travelling = False
             self.clients.remove(client)
         self.capacity -= len(clients_lst)
-
-    def remove_floor_fq(self, floor, direction):
-        """
-        when the elevator closes its doors, pull the next floor and remove it from queue and set
-        :param floor:
-        :param direction:
-        :return:
-        """
-        pass
 
     def board_clients(self, clients_lst):
         self.clients += clients_lst
         self.capacity += len(clients_lst)
         self.doors_open = False
 
-    def update_clients_time(self):
-        travel_time = self.ride_time()
-        for client in self.clients:
-            client.add_travel_time(travel_time)  # add client travel time between floors
-
-    def ride_time(self):
+    def travel(self):
         """
-        pop floor out of queue, move elevator
+        pop floor out of queue, move elevator, flip elevator direction if necessary
         :return: time of travel between floors
         """
-        if self.up:
-            next_floor = hpq.heappop(self.up_queue)
+        if self.saturday:
+            # change elevator direction on end of range
+            if (self.up and self.floor in (15, 25)) or (not self.up and self.floor == 0):
+                self.up = not self.up
+            if self.up:
+                self.floor += 1
+            else:
+                self.floor -= 1
+            travel_time = 5
         else:
-            next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
-        self.floor = next_floor  # move elevator
-        return 4 + abs(self.floor - next_floor)
+            if self.up:
+                next_floor = hpq.heappop(self.up_queue)
+            else:
+                next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
+            self.floor = next_floor  # move elevator
+            # top or bottom floor, or only 1 of the queues are empty
+            if next_floor in (0, 25) or (bool(self.up_queue) != bool(self.down_queue)):
+                self.up = not self.up  # flip elevator direction
+            travel_time = 4 + abs(self.floor - next_floor)
+        for client in self.clients:
+            client.travel()
+
+        return travel_time
 
     @staticmethod
     def get_fix_time():
@@ -104,3 +106,8 @@ class Elevator:
         :return: time of fix in seconds
         """
         return np.random.uniform(5 * 60, 15 * 60)
+
+
+if __name__ == "__main__":
+    print(bool([1,23]),bool([]))
+    pass

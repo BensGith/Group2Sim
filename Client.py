@@ -4,6 +4,7 @@ class Client:
         self.desired_floor = desired_floor
         self.time_in_sys = 0
         self.floor_time = 0
+        self.travelling = False
         self.current_floor = current_floor
         if (current_floor <= 15 and desired_floor >= 16) or (current_floor >= 15 and desired_floor <= 16):
             self.need_swap = True
@@ -17,21 +18,18 @@ class Client:
         return self.floor_time < other.floor_time
 
     def abandon(self):
+        # check if client inside elevator
         return self.time_in_sys > 15 * 60  # abandon if waiting more than 15 minutes
 
     def add_wait_time(self, time):
-        self.time_in_sys += time
         self.floor_time += time
 
-    def travel(self, time):
-        """
-        call this method when client travels in the Elevator
-        :return: None
-        """
+    def add_system_time(self, time):
         self.time_in_sys += time
+
+    def travel(self):
+        self.travelling = True
         self.floor_time = 0
-
-
 if __name__ == "__main__":
     lst1 = [Client(0, 1), Client(0, 2)]
     c = lst1[0]

@@ -3,7 +3,6 @@ import heapq as hpq
 
 class Floor:
     def __init__(self, number):
-        self.clients = []
         self.number = number
         self.line = []  # priority queue
         self.n_clients = 0
@@ -15,8 +14,18 @@ class Floor:
         hpq.heappush(self.line, client)
         self.n_clients += 1
 
+    def remove_from_line(self, client):
+        self.line.remove(client)
+
+    def order_line(self):
+        """
+        use this method to order the line after client abandoning
+        :return:
+        """
+        hpq.heapify(self.line)
+        
     def update_client_time(self, time):
-        for client in self.clients:
+        for client in self.line:
             client.add_wait_time(time)
 
     def drop_clients(self, elevator):
