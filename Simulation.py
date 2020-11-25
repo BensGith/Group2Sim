@@ -16,11 +16,13 @@ class Simulation:
         self.simulation_time = 60 * 60 * 24
         self.curr_time = 0  # simulation clock
         self.floors = [Floor(i) for i in range(26)]
-        self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         self.events = []
         self.total_clients = 0
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
+        self.current_event = None
+        self.prv_event = None
+        self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
 
     def reset_simulation(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
@@ -52,15 +54,46 @@ class Simulation:
         """
         return int(time // (24 * 60))
 
-    def generate_client_arrival(self):
-        """
-        generate a client with a current floor, desired floor and arrival time
-        :return: Client object
-        """
-        return Client(0, 13, 0.01)  # replace with random generated numbers
+    def gen_client(self):
+        morning = [150, 400, 90, 84, 60, 120, 60, 36]
+        afternoon = [90, 120, 150, 84, 60, 400, 60, 36]
+        other = [60, 70, 60, 84, 60, 70, 60, 36]
+        m_prob = [morning[i] / 1000 for i in range(len(morning))]
+        a_prob = [afternoon[i] / 1000 for i in range(len(afternoon))]
+        o_prob = [other[i] / 500 for i in range(len(other))]
+        rows_in_table = [i for i in range(8)]
+        arrivals = [(0, 1), (0, 1), (1, 16), (1, 16), (1, 16), (16, 26), (16, 26), (16, 26)]
+        destinations = [(1, 16), (16, 26), (0, 1), (1, 16), (16, 26), (0, 1), (1, 16), (16, 26)]
+        if self.curr_time >= 25200 and self.curr_time <= 36000:
+            probs = m_prob
+            time = 'morning'
+        elif self.curr_time >= 54000 and self.curr_time <= 64800:
+            probs = a_prob
+            time = 'afternoon'
+        else:
+            probs = o_prob
+            time = 'other'
 
-    def arriving(self):
-        client = self.generate_client_arrival()
+        row = int(np.random.choice(rows_in_table, p=probs, size=1))
+        curr_floor = arrivals[row]
+
+        curr_floor = np.random.randint(curr_floor[0], curr_floor[1])
+        desired_floor = destinations[row]
+        desired_floor_tmp = np.random.randint(desired_floor[0], desired_floor[1])
+        while curr_floor == desired_floor_tmp:
+            desired_floor_tmp = np.random.randint(desired_floor[0], desired_floor[1])
+        desired_floor = desired_floor_tmp
+        if time == 'morning':
+            y = np.random.exponential(1 / (1000 / 3600))
+        elif time == 'afternoon':
+            y = np.random.exponential(1 / (1000 / 3600))
+        else:
+            y = np.random.exponential(1 / (500 / 3600))
+
+        return Client(curr_floor, desired_floor, y + self.curr_time)
+
+    def arriving(self, event):
+        client = event.client
         self.total_clients += 1  # add to total count
         current_floor = client.current_floor  # current floor number, use as index to access floor list
         self.floors[current_floor].add_to_line(client)  # add client to floor's line
@@ -68,8 +101,8 @@ class Simulation:
         service = False
         for elevator in self.elevators:
             # there is an Elevator in the desired floor with closed doors, open doors
-            if elevator.floor == current_floor and not elevator.doors_open:
-                hpq.heappush(self.events, Event(self.curr_time, "door open", current_floor, elevator.number))
+            if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
+                hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
                 service = True
                 break  # open just one Elevator
         # passengers board on door CLOSE event, take whoever wants to board before they close!
@@ -78,28 +111,32 @@ class Simulation:
                 # order an elevator to client's floor
                 if client.need_swap:
                     self.order_elevator(current_floor, "down", 0)
-                else:
+                else:  # client doesn't need swap
                     direction = None
                     if client.current_floor > client.desired_floor:
                         direction = "down"
                     elif client.current_floor < client.desired_floor:
                         direction = "up"
                     self.order_elevator(current_floor, direction, client.desired_floor)
+            # don't do anything if it's saturday, elevators
+
         if self.curr_time < self.simulation_time:
-            hpq.heappush(self.events, Event(self.curr_time, "arriving"))
+            client = self.gen_client()
+            hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
 
     def door_close(self, event):
         floor = self.floors[event.floor]
-        elevator = self.elevators[event.elevator]
+        elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = False
         floor.board_clients(elevator)  # add clients that arrived before door closing
-        travel_time = event.elevator.travel()  # pops floor from queue and moves the elevator to next floor
+        travel_time = elevator.travel()  # pops floor from queue and moves the elevator to next floor
         # elevator.floor is the new floor the elevator reached
         hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open", elevator.floor, elevator.number))
 
     def door_open(self, event):
+
         floor = self.floors[event.floor]
-        elevator = self.elevators[event.elevator]
+        elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = True
         left_sys = floor.drop_clients(elevator)  # update Simulation metrics?
         self.total_clients -= left_sys
@@ -113,7 +150,7 @@ class Simulation:
 
     def elevator_fix(self, event):
         elevator = event.elevator
-        self.elevators[elevator].fix_elevator()
+        self.elevators[elevator - 1].fix_elevator()
         hpq.heappush(self.events, Event(self.curr_time, "door open", event.floor, event.elevator))
 
     def order_elevator(self, floor, direction, desired_floor):
@@ -161,7 +198,7 @@ class Simulation:
             self.elevators[candidate_elevator].add_to_queue(floor,
                                                             direction)  # add floor to chosen elevators queue
             # add target floor to queue
-            self.elevators[candidate_elevator].add_to_queue(desired_floor * (-1), direction)
+            self.elevators[candidate_elevator].add_to_queue(desired_floor, direction)
 
     def update_times(self, event_time, prv_event_time):
         for floor in self.floors:
@@ -178,20 +215,24 @@ class Simulation:
                 floor.order_line()  # reorder floor line if clients left
 
     def run(self):
-        curr_time = self.generate_client_arrival()
-        hpq.heappush(self.events, Event(self.curr_time, "arriving"))
-        for i in range(100):
+        client = self.gen_client()
+        hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
+        for elevator in self.elevators:
+            hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
+
+        for i in range(1):
             # reset simulation
-            while self.total_clients > 0 or self.curr_time < self.simulation_time:
-                prv_event = None
-                prv_minute = None
-                current_minute = None
-                event_time = 2
-                prv_event_time = 1
+            while self.curr_time < self.simulation_time:
+                # prv_event = None
+                # prv_minute = None
+                # current_minute = None
+                # event_time = 2
+                # prv_event_time = 1
                 event = hpq.heappop(self.events)
-                self.update_times(event_time, prv_event_time)
+                self.curr_time = event.time
+                # self.update_times(event_time, prv_event_time)
                 if event.event_type == "arriving":
-                    self.arriving()
+                    self.arriving(event)
                 elif event.event_type == "door open":
                     self.door_open(event)
                 elif event.event_type == "elevator fix":
@@ -201,8 +242,27 @@ class Simulation:
                 # update  system time for clients
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     sat_sim = Simulation(True)  # saturday
     sat_sim.run()
-    reg_sim = Simulation()
-    reg_sim.run()
+    ##### first arrival, taking the first elevator ######
+    # sat_sim.arriving()  # working
+    # event = hpq.heappop(sat_sim.events)
+    # sat_sim.curr_time = event.time
+    # sat_sim.door_open(event)
+    # event = sat_sim.events[1]
+    # sat_sim.curr_time = event.time
+    # sat_sim.door_close(event)
+    # event = sat_sim.events[2]
+    # sat_sim.curr_time = event.time
+    # sat_sim.door_open(event)
+    # event = sat_sim.events[3]
+    # sat_sim.curr_time = event.time
+    # sat_sim.door_close(event)
+
+    # event = Event()
+    print("b")
+    # sat_sim.run()
+    # reg_sim = Simulation()
+    # reg_sim.run()
+    # problem with arrival events

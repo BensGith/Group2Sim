@@ -1,12 +1,10 @@
 import numpy as np
-import random
 import heapq as hpq
 
 
 class Elevator:
     def __init__(self, number, saturday):
         self.number = number
-        self.floor = 0
         self.capacity = 0
         self.is_stuck = False
         self.clients = []  # client in elevator
@@ -15,6 +13,13 @@ class Elevator:
         self.down_queue = []  # push floors to queue with *-1 to maintain hpq pulling the max element, Simulation pushes
         self.doors_open = False
         self.up = True
+        if self.saturday:  # start elevator at random floor on saturday
+            if self.number <= 2:  # for elevators 1,2 start from 0 - 15
+                self.floor = np.random.choice([i for i in range(16)], 1)[0]  # returns a list, take arg 0
+            else:  # for elevators 3,4 start from 0 or 16-25
+                self.floor = np.random.choice([0]+[i for i in range(16, 25)], 1)[0]  # returns a list, take arg 0
+        else:
+            self.floor = 0
         self.orders = set()  # keeps track of orders being made
 
         if self.number <= 2:  # elevators 1,2
@@ -31,7 +36,7 @@ class Elevator:
         method to randomize Elevator getting stuck
         :return: boolean
         """
-        if random.random(1) <= 0.0005:
+        if np.random.random(1) <= 0.0005:
             self.is_stuck = True
             return True
         return False
@@ -82,29 +87,37 @@ class Elevator:
         """
         if self.saturday:
             # change elevator direction on end of range
-            if (self.up and self.floor in (15, 25)) or (not self.up and self.floor == 0):
-                self.up = not self.up
-            if self.up:
-                self.floor += 1
-                travel_time = 5
-            elif not self.up and self.floor != 16:  # go down from 16 to 0
-                self.floor -= 1
-                travel_time = 5
-            else:
+
+            if self.up and self.floor == 0 and self.number in (3, 4):  # travel from 0 to 16
+                self.floor = 16
+                travel_time = 20
+
+            elif not self.up and self.floor == 16:  # go down from 16 to 0
                 self.floor = 0
                 travel_time = 20  # travel from 16 to 0
+
+            elif self.up:  # moving up 1 floor
+                self.floor += 1
+                travel_time = 5
+
+            else:  # moving down 1 floor
+                self.floor -= 1
+                travel_time = 5
+
+            if (self.up and self.floor in (15, 25)) or (not self.up and self.floor == 0):
+                self.up = not self.up
         else:
-            if self.up:
+            if self.up:  # move elevator to next floor from queue
                 next_floor = hpq.heappop(self.up_queue)
 
-            else:
+            else:  # move elevator to next floor from queue
                 next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
-                self.orders.remove(next_floor)
+            self.orders.remove(next_floor)
+            travel_time = 4 + abs(self.floor - next_floor)
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
             if next_floor in (0, 16, 25) or (bool(self.up_queue) != bool(self.down_queue)):
                 self.up = not self.up  # flip elevator direction
-            travel_time = 4 + abs(self.floor - next_floor)
         for client in self.clients:
             client.travel()
         return travel_time

@@ -1,5 +1,5 @@
 class Event:
-    def __init__(self, time, event_type, floor=None, elevator=None):
+    def __init__(self, time, event_type, floor=None, elevator=None, client=None):
         """
         floor and elevator are INDEXES!! Simulation object uses that index to find the objects
         :param time: system time
@@ -11,6 +11,7 @@ class Event:
         self.event_type = event_type
         self.floor = floor
         self.elevator = elevator
+        self.client = client
 
     def __lt__(self, other):
         return self.time < other.time

@@ -8,7 +8,7 @@ class Floor:
         self.n_clients = 0
 
     def __repr__(self):
-        return "Floor: {}".format(self.number)
+        return "Floor: {}, Clients {}".format(self.number, self.n_clients)
 
     def add_to_line(self, client):
         hpq.heappush(self.line, client)
@@ -47,6 +47,7 @@ class Floor:
         if dropped > 0:
             hpq.heapify(self.line)
             elevator.remove_clients(leaving)  # remove from system
+            print(str(dropped) + " people left at floor {}".format(self.number))
         return dropped
 
     def board_clients(self, elevator):
@@ -57,7 +58,7 @@ class Floor:
         boarding = []
         staying = []
 
-        while self.line or len(boarding) == elevator.free_space():  # stop boarding people if line is empty or 15 inside
+        while self.line and len(boarding) <= elevator.free_space(): # stop boarding people if line is empty or 15 inside
             client = hpq.heappop(self.line)
             # if client needs a swap, he will take any elevator down
             if client.need_swap and not elevator.up:

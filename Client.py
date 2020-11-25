@@ -7,7 +7,7 @@ class Client:
         self.travelling = False
         self.current_floor = current_floor
         self.direction = None
-        if (current_floor <= 15 and desired_floor >= 16) or (current_floor >= 15 and desired_floor <= 16):
+        if (1 <= current_floor <= 15 and desired_floor >= 16) or (current_floor >= 16 and desired_floor <= 15 and desired_floor != 0):
             self.need_swap = True  # use for ordering elevators in Simulation
         else:
             self.need_swap = False  # use for ordering elevators in Simulation (will order it to go to 0)
