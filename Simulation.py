@@ -99,15 +99,15 @@ class Simulation:
         self.floors[current_floor].add_to_line(client)  # add client to floor's line
         # search for elevator in this floor
         service = False
-        for elevator in self.elevators:
-            # there is an Elevator in the desired floor with closed doors, open doors
-            if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
-                hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
-                service = True
-                break  # open just one Elevator
-        # passengers board on door CLOSE event, take whoever wants to board before they close!
-        if not service:  # no present elevator
-            if not self.saturday:  # can't order the elevator on Saturday mode
+        if not self.saturday:
+            for elevator in self.elevators:
+                # there is an Elevator in the desired floor with closed doors, open doors
+                if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
+                    hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
+                    service = True
+                    break  # open just one Elevator
+            # passengers board on door CLOSE event, take whoever wants to board before they close!
+            if not service:  # no present elevator
                 # order an elevator to client's floor
                 if client.need_swap:
                     self.order_elevator(current_floor, "down", 0)
@@ -229,6 +229,7 @@ class Simulation:
                 # event_time = 2
                 # prv_event_time = 1
                 event = hpq.heappop(self.events)
+                print(event)
                 self.curr_time = event.time
                 # self.update_times(event_time, prv_event_time)
                 if event.event_type == "arriving":

@@ -17,5 +17,5 @@ class Event:
         return self.time < other.time
 
     def __repr__(self):
-        return "{} : {}".format(self.event_type, self.time)
+        return "{} : {} f{} e{}".format(self.event_type, self.time,self.floor,self.elevator)
 

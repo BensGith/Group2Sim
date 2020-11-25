@@ -47,7 +47,7 @@ class Floor:
         if dropped > 0:
             hpq.heapify(self.line)
             elevator.remove_clients(leaving)  # remove from system
-            print(str(dropped) + " people left at floor {}".format(self.number))
+            '''print(str(dropped) + " people left at floor {}".format(self.number))'''
         return dropped
 
     def board_clients(self, elevator):

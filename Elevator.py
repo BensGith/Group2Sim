@@ -38,6 +38,7 @@ class Elevator:
         """
         if np.random.random(1) <= 0.0005:
             self.is_stuck = True
+            print(str(self.number) + 'is_stuck')
             return True
         return False
 
