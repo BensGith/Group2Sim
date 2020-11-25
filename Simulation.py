@@ -105,23 +105,21 @@ class Simulation:
         if not self.saturday:
             for elevator in self.elevators:
                 # there is an Elevator in the desired floor with closed doors, open doors
-                if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
-                    hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
-                    service = True
-                    break  # open just one Elevator
-            # passengers board on door CLOSE event, take whoever wants to board before they close!
-            if not service:  # no present elevator
-                # order an elevator to client's floor
-                if client.need_swap:
-                    self.order_elevator(current_floor, "down", 0)
-                else:  # client doesn't need swap
-                    direction = None
-                    if client.current_floor > client.desired_floor:
-                        direction = "down"
-                    elif client.current_floor < client.desired_floor:
-                        direction = "up"
-                    self.order_elevator(current_floor, direction, client.desired_floor)
-            # don't do anything if it's saturday, elevators
+                if not elevator.start:
+                    if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
+                        elevator.start = True  # elevator won't open while moving
+                        hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
+                        break  # open just one Elevator
+            if client.need_swap:  # add current and target floors to queue
+                self.order_elevator(current_floor, "down", 0)
+            else:  # client doesn't need swap
+                direction = None
+                if client.current_floor > client.desired_floor:
+                    direction = "down"
+                elif client.current_floor < client.desired_floor:
+                    direction = "up"
+                self.order_elevator(current_floor, direction, client.desired_floor)
+        # don't do anything if it's saturday, elevators
 
         if self.curr_time < self.simulation_time:
             client = self.gen_client()
@@ -186,19 +184,19 @@ class Simulation:
         # just add the number of floors it has left to 25 and add 25- desired
         # avoid ordering if elevator present in floor
         closest = 999
-        if desired_floor == 0:
-            if 16 <= floor <= 25:
-                candidate_elevator = 2
-            else:
-                candidate_elevator = 0
-        else:  # no need for swapping
-            if 16 <= desired_floor <= 25:
-                candidate_elevator = 2
-            else:
-                candidate_elevator = 0
+        # set default elevator to be ordered
+        if 0 <= floor <= 15 and 0 <= desired_floor <= 15:  # lower range
+            candidate_elevator = 0
+        elif (floor >= 16 or floor == 0) and (desired_floor >= 16 or desired_floor == 0):  # upper range
+            candidate_elevator = 2
+        else:
+            candidate_elevator = 2
+            print("Error")
         for elevator in self.elevators:
-            # noinspection DuplicatedCode
-            if elevator.is_stuck or (floor not in elevator.service_floors):  # can't order that elevator
+            # elevator not stuck and must be able to reach from client's floor to desired floor
+            # desired floor will be 0 if client wants a swap
+            # if one of the conditions is true, don't order that elevator!
+            if elevator.is_stuck or (floor not in elevator.service_floors or desired_floor not in elevator.service_floors):  # can't order that elevator
                 continue
             score = 999
             if elevator.up:  # elevator moving up
@@ -212,21 +210,11 @@ class Simulation:
                     score = elevator.floor - floor
                 elif elevator.floor < floor:  # elevator passed the floor
                     score = elevator.floor + floor  # first is distance to bottom, second is from bottom to request
-            if score < closest:
-                closest = abs(elevator.floor - floor)
-                candidate_elevator = elevator.number
-
-        if direction == "down":
-            # mul floor by -1 chosen elevators queue, because of down queue takes out the min floor, we need the max one
-            self.elevators[candidate_elevator].add_to_queue(floor * (-1), direction)
-            # add target floor to queue
-            self.elevators[candidate_elevator].add_to_queue(desired_floor * (-1), direction)
-        else:  # direction is up
-            self.elevators[candidate_elevator].add_to_queue(floor,
-                                                            direction)  # add floor to chosen elevators queue
-            # add target floor to queue
-            self.elevators[candidate_elevator].add_to_queue(desired_floor, direction)
-
+            if score < closest and score != 0:  # don't order an elevator that is in that floor
+                closest = score
+                candidate_elevator = elevator.number - 1
+        elevator = self.elevators[candidate_elevator]
+        elevator.add_to_queue([floor, desired_floor], direction)
 
     def run(self):
         client = self.gen_client()
@@ -257,7 +245,7 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(True)  # saturday
+    sat_sim = Simulation(False)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sat_sim.abandoned)
