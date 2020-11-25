@@ -122,13 +122,17 @@ class Elevator:
             if (self.up and self.floor in (15, 25)) or (not self.up and self.floor == 0):
                 self.up = not self.up
         else:
-            if self.up:  # move elevator to next floor from queue
+            if self.up and self.up_queue:  # move elevator to next floor from queue
                 next_floor = hpq.heappop(self.up_queue)
-
-            else:  # move elevator to next floor from queue
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+            elif not self.up and self.down_queue:  # move elevator to next floor from queue
                 next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
-            self.orders.remove(next_floor)
-            travel_time = 4 + abs(self.floor - next_floor)
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+            else:
+                next_floor = self.floor
+                travel_time = 0
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
             if next_floor in (0, 16, 25) or (not self.up_queue and self.up) or (not self.down_queue and not self.up):

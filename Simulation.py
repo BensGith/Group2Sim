@@ -245,7 +245,7 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(False)  # saturday
+    sat_sim = Simulation(True)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sat_sim.abandoned)
