@@ -68,16 +68,20 @@ class Elevator:
         return 15 - self.capacity
 
     def remove_clients(self, clients_lst):
+        print("pre-leaving " + str(self.clients))
         self.doors_open = True
         for client in clients_lst:
             client.travelling = False
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
+        print("after leaving " + str(self.clients))
         self.capacity -= len(clients_lst)
 
     def board_clients(self, clients_lst):
+        print("pre-boarding " + str(self.clients))
         self.clients += clients_lst
+        print("after-boarding " + str(self.clients))
         self.capacity += len(clients_lst)
         self.doors_open = False
 

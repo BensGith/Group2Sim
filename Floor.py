@@ -28,7 +28,7 @@ class Floor:
         for client in self.line:
             client.add_wait_time(time)
 
-    def drop_clients(self, elevator):
+    def drop_clients(self, elevator, curr_time):
         """
         method to drop clients in matching floor
         :param elevator: Elevator object
@@ -36,37 +36,50 @@ class Floor:
         """
         dropped = 0
         leaving = []
+        service_time = []
         for client in elevator.clients:
             if self.number == client.desired_floor:  # client reached desired floor
+                client.time_in_sys = curr_time - client.arrival_time
+                service_time.append(client.time_in_sys)
                 leaving.append(client)
                 dropped += 1
             elif client.desired_floor not in elevator.service_floors and self.number == 0:  # go off elevator for swap
-                hpq.heappush(self.line, client)  # add client to queue
+                client.direction = True
                 leaving.append(client)
                 self.line.append(client)
+                dropped += 1
         if dropped > 0:
             hpq.heapify(self.line)
             elevator.remove_clients(leaving)  # remove from system
-            '''print(str(dropped) + " people left at floor {}".format(self.number))'''
-        return dropped
 
-    def board_clients(self, elevator):
+        return service_time
+
+    def board_clients(self, elevator, curr_time):
         """
         remove n<= free space in elevator of people from line if they need this elevator
         :return: None
         """
         boarding = []
         staying = []
+        abandoned = 0
 
-        while self.line and len(boarding) <= elevator.free_space(): # stop boarding people if line is empty or 15 inside
-            client = hpq.heappop(self.line)
+        for i in range(len(self.line)):
+            if (curr_time - self.line[i].arrival_time) > 15*60 and not self.line[i].got_service:
+                hpq.heappop(self.line)  # pop client from line
+                abandoned += 1
+            else:
+                break
+        while self.line and len(boarding) < elevator.free_space():  # stop boarding people if line is empty or 15 inside
+            client = hpq.heappop(self.line)  # get first person in line
             # if client needs a swap, he will take any elevator down
             if client.need_swap and not elevator.up:
+                client.got_service = True
                 boarding.append(client)
                 client.travelling = True
                 client.need_swap = False
                 self.n_clients -= 1  # update number of staying in the floor
             elif elevator.up == client.direction and client.desired_floor in elevator.service_floors:
+                client.got_service = True
                 boarding.append(client)
                 client.travelling = True
                 self.n_clients -= 1  # update number of staying in the floor
@@ -77,7 +90,7 @@ class Floor:
                 self.line.append(client)  # push clients back to line
             hpq.heapify(self.line)  # reorder line
         elevator.board_clients(boarding)  # board clients to elevator
-
+        return abandoned
 
 if __name__ == "__main__":
     # test adding and removing from elevator

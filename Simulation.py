@@ -9,8 +9,10 @@ from Client import Client
 # Assumption - the line in the floor is determined by time spent in floor
 # Assumption - if client boarded and elevator got stuck, clients are pushed to the back of the line
 # Assumption - if client ordered an elevator and it's full it WILL STOP in that floor like a real elevator
+# Assumption - lines are sorted by arrival time
 
 
+# noinspection DuplicatedCode
 class Simulation:
     def __init__(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
@@ -23,6 +25,7 @@ class Simulation:
         self.current_event = None
         self.prv_event = None
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
+        self.service_dist = {60:0, 120:0, 180:0, 240:0, 300:0, "other":0 }
 
     def reset_simulation(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
@@ -128,7 +131,9 @@ class Simulation:
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = False
-        floor.board_clients(elevator)  # add clients that arrived before door closing
+        abandoned = floor.board_clients(elevator, self.curr_time)  # add clients that arrived before door closing
+        self.abandoned += abandoned
+        self.total_clients -= abandoned
         travel_time = elevator.travel()  # pops floor from queue and moves the elevator to next floor
         # elevator.floor is the new floor the elevator reached
         hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open", elevator.floor, elevator.number))
@@ -138,8 +143,22 @@ class Simulation:
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = True
-        left_sys = floor.drop_clients(elevator)  # update Simulation metrics?
-        self.total_clients -= left_sys
+        service_times = floor.drop_clients(elevator, self.curr_time)  # update Simulation metrics?
+        self.total_clients -= len(service_times)  # remove clients that left from system
+        for time in service_times:
+            if time <= 60:
+                self.service_dist[60] +=1
+            elif time <= 120:
+                self.service_dist[120] += 1
+            elif time <= 180:
+                self.service_dist[180] += 1
+            elif time <= 240:
+                self.service_dist[240] += 1
+            elif time <= 300:
+                self.service_dist[300] += 1
+            else:
+                self.service_dist["other"] += 1
+
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
             hpq.heappush(self.events, Event(self.curr_time + time_to_fix, "elevator fix",
@@ -161,16 +180,24 @@ class Simulation:
         :param direction: "up" or "down"
         :return: None
         """
+        # if swap is needed, desired floor will be 0
         # score elevators according to their distance from floor given
         # if elevator is going the opposite direction,
         # just add the number of floors it has left to 25 and add 25- desired
         # avoid ordering if elevator present in floor
         closest = 999
-        if 16 <= floor <= 25:
-            candidate_elevator = 2
-        else:
-            candidate_elevator = 0
+        if desired_floor == 0:
+            if 16 <= floor <= 25:
+                candidate_elevator = 2
+            else:
+                candidate_elevator = 0
+        else:  # no need for swapping
+            if 16 <= desired_floor <= 25:
+                candidate_elevator = 2
+            else:
+                candidate_elevator = 0
         for elevator in self.elevators:
+            # noinspection DuplicatedCode
             if elevator.is_stuck or (floor not in elevator.service_floors):  # can't order that elevator
                 continue
             score = 999
@@ -186,7 +213,7 @@ class Simulation:
                 elif elevator.floor < floor:  # elevator passed the floor
                     score = elevator.floor + floor  # first is distance to bottom, second is from bottom to request
             if score < closest:
-                closest = elevator.floor - floor
+                closest = abs(elevator.floor - floor)
                 candidate_elevator = elevator.number
 
         if direction == "down":
@@ -200,26 +227,13 @@ class Simulation:
             # add target floor to queue
             self.elevators[candidate_elevator].add_to_queue(desired_floor, direction)
 
-    def update_times(self, event_time, prv_event_time):
-        for floor in self.floors:
-            abandon = False
-            for client in floor.line:
-                if not client.travelling:
-                    if client.abandon():
-                        self.abandoned += 1
-                        abandon = True
-                        floor.remove_from_line(client)
-                    client.add_wait_time(event_time - prv_event_time)
-                client.add_system_time(event_time - prv_event_time)
-            if abandon:
-                floor.order_line()  # reorder floor line if clients left
 
     def run(self):
         client = self.gen_client()
         hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
-        for elevator in self.elevators:
-            hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
-
+        if self.saturday:
+            for elevator in self.elevators:
+                hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
         for i in range(1):
             # reset simulation
             while self.curr_time < self.simulation_time:
@@ -229,7 +243,6 @@ class Simulation:
                 # event_time = 2
                 # prv_event_time = 1
                 event = hpq.heappop(self.events)
-                print(event)
                 self.curr_time = event.time
                 # self.update_times(event_time, prv_event_time)
                 if event.event_type == "arriving":
@@ -246,6 +259,8 @@ class Simulation:
 if __name__ == "__main__":
     sat_sim = Simulation(True)  # saturday
     sat_sim.run()
+    print(sat_sim.service_dist)
+    print(sat_sim.abandoned)
     ##### first arrival, taking the first elevator ######
     # sat_sim.arriving()  # working
     # event = hpq.heappop(sat_sim.events)
@@ -262,7 +277,6 @@ if __name__ == "__main__":
     # sat_sim.door_close(event)
 
     # event = Event()
-    print("b")
     # sat_sim.run()
     # reg_sim = Simulation()
     # reg_sim.run()

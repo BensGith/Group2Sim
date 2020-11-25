@@ -7,6 +7,7 @@ class Client:
         self.travelling = False
         self.current_floor = current_floor
         self.direction = None
+        self.got_service = False
         if (1 <= current_floor <= 15 and desired_floor >= 16) or (current_floor >= 16 and desired_floor <= 15 and desired_floor != 0):
             self.need_swap = True  # use for ordering elevators in Simulation
         else:
@@ -20,14 +21,14 @@ class Client:
             self.direction = False
 
     def __repr__(self):
-        return "Client system time {}, floor time {}".format(self.time_in_sys, self.floor_time)
+        return "Client arrival time {}, cf {}, df {}, ns {}".format( self.arrival_time,
+                                                                     self.current_floor,
+                                                                     self.desired_floor,
+                                                                     self.need_swap)
 
     def __lt__(self, other):
-        return self.floor_time < other.floor_time
+        return self.arrival_time < other.arrival_time
 
-    def abandon(self):
-        # check if client inside elevator
-        return self.time_in_sys > 15 * 60  # abandon if waiting more than 15 minutes
 
     def add_wait_time(self, time):
         self.floor_time += time
@@ -37,7 +38,7 @@ class Client:
 
     def travel(self):
         self.travelling = True
-        self.floor_time = 0
+        self.floor_time = 0  # push client to end of line
 
 
 if __name__ == "__main__":
