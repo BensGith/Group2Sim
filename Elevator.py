@@ -39,6 +39,7 @@ class Elevator:
         """
         if np.random.random(1) <= 0.0005:
             self.is_stuck = True
+            print(str(self.number) + 'is_stuck')
             return True
         return False
 
@@ -74,23 +75,24 @@ class Elevator:
         calculate how many clients can board the Elevator
         :return: int
         """
-        return 15 - len(self.clients)
+        return 15 - self.capacity
 
     def remove_clients(self, clients_lst):
 
         self.doors_open = True
-        self.capacity -= len(clients_lst)
         for client in clients_lst:
             client.travelling = False
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
 
-    def board_clients(self, clients_lst):
+        self.capacity -= len(clients_lst)
 
+    def board_clients(self, clients_lst):
         self.clients += clients_lst
         self.capacity += len(clients_lst)
         self.doors_open = False
+
     def travel(self):
         """
         pop floor out of queue, move elevator, flip elevator direction if necessary
@@ -126,9 +128,29 @@ class Elevator:
                 next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
                 self.orders.remove(next_floor)
                 travel_time = 4 + abs(self.floor - next_floor)
+            elif self.up and not self.up_queue and self.down_queue:
+                next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+                self.up = False
+            elif not self.up and not self.down_queue and self.up_queue:
+                next_floor = hpq.heappop(self.up_queue)
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+            elif self.up_queue:
+                next_floor = hpq.heappop(self.up_queue)
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+                self.up = True
+            elif self.down_queue:
+                next_floor = hpq.heappop(self.down_queue) *(-1)
+                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+                self.up = False
+
             else:
-                next_floor = self.floor
-                travel_time = 0
+                next_floor = 0
+                travel_time = abs(self.floor - next_floor)
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
             if next_floor in (0, 16, 25) or (not self.up_queue and self.up) or (not self.down_queue and not self.up):

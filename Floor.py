@@ -16,8 +16,6 @@ class Floor:
 
     def remove_from_line(self, client):
         self.line.remove(client)
-        self.n_clients -= 1
-
 
     def order_line(self):
         """
@@ -39,6 +37,8 @@ class Floor:
         dropped = 0
         leaving = []
         service_time = []
+        if len(elevator.clients) == 15:
+            print("sd")
         for client in elevator.clients:
             if self.number == client.desired_floor:  # client reached desired floor
                 client.time_in_sys = curr_time - client.arrival_time
@@ -67,9 +67,8 @@ class Floor:
 
         while self.line and len(boarding) < elevator.free_space():  # stop boarding people if line is empty or 15 inside
             client = hpq.heappop(self.line)  # get first person in line
-            if (curr_time - client.arrival_time) > 15 * 60 and not client.got_service:
+            if (curr_time - client.arrival_time) > 15*60 and not client.got_service:
                 abandoned += 1
-                self.n_clients -= 1
                 continue
             # if client needs a swap, he will take any elevator down
             if client.need_swap and not elevator.up:
