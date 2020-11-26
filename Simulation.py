@@ -16,7 +16,7 @@ from Client import Client
 class Simulation:
     def __init__(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
-        self.curr_time = 0  # simulation clock
+        self.curr_time = 25200  # simulation clock starts at 7
         self.floors = [Floor(i) for i in range(26)]
         self.events = []
         self.total_clients = 0
@@ -121,7 +121,7 @@ class Simulation:
                 self.order_elevator(current_floor, direction, client.desired_floor)
         # don't do anything if it's saturday, elevators
 
-        if self.curr_time < self.simulation_time:
+        if self.curr_time < self.simulation_time and self.curr_time<=72000:
             client = self.gen_client()
             hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
 
