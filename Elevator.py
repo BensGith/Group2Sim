@@ -39,7 +39,6 @@ class Elevator:
         """
         if np.random.random(1) <= 0.0005:
             self.is_stuck = True
-            print(str(self.number) + 'is_stuck')
             return True
         return False
 
@@ -75,26 +74,23 @@ class Elevator:
         calculate how many clients can board the Elevator
         :return: int
         """
-        return 15 - self.capacity
+        return 15 - len(self.clients)
 
     def remove_clients(self, clients_lst):
-        print("pre-leaving " + str(self.clients))
+
         self.doors_open = True
+        self.capacity -= len(clients_lst)
         for client in clients_lst:
             client.travelling = False
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
-        print("after leaving " + str(self.clients))
-        self.capacity -= len(clients_lst)
 
     def board_clients(self, clients_lst):
-        print("pre-boarding " + str(self.clients))
+
         self.clients += clients_lst
-        print("after-boarding " + str(self.clients))
         self.capacity += len(clients_lst)
         self.doors_open = False
-
     def travel(self):
         """
         pop floor out of queue, move elevator, flip elevator direction if necessary

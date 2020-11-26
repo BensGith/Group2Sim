@@ -22,8 +22,6 @@ class Simulation:
         self.total_clients = 0
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
-        self.current_event = None
-        self.prv_event = None
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         self.service_dist = {60:0, 120:0, 180:0, 240:0, 300:0, "other":0 }
 
@@ -129,11 +127,22 @@ class Simulation:
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = False
+        print("elevator {} closing at floor {} on_elevator {}".format(elevator.number,
+                                                                         floor.number,
+                                                                         elevator.capacity
+                                                                    ))
+        print("{} people in line at floor {} pre boarding".format(len(floor.line),floor.number))
         abandoned = floor.board_clients(elevator, self.curr_time)  # add clients that arrived before door closing
         self.abandoned += abandoned
         self.total_clients -= abandoned
         travel_time = elevator.travel()  # pops floor from queue and moves the elevator to next floor
         # elevator.floor is the new floor the elevator reached
+        print("{} people in line at floor {} after boarding".format(len(floor.line), floor.number))
+        print("elevator {} leaving floor {} to {} on_elevator {}".format(elevator.number,
+                                                                  floor.number,
+                                                                  elevator.floor,
+                                                                len(elevator.clients)))
+
         hpq.heappush(self.events, Event(self.curr_time + travel_time, "door open", elevator.floor, elevator.number))
 
     def door_open(self, event):
@@ -142,6 +151,11 @@ class Simulation:
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = True
         service_times = floor.drop_clients(elevator, self.curr_time)  # update Simulation metrics?
+        print("elevator {} open at floor {} on_elevator {} c_left {}".format(elevator.number,
+                                                                    floor.number,
+                                                                    len(elevator.clients),
+                                                                    len(service_times)),
+                                                                     )
         self.total_clients -= len(service_times)  # remove clients that left from system
         for time in service_times:
             if time <= 60:
@@ -159,6 +173,7 @@ class Simulation:
 
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
+            print("elevator {} stuck at floor {} - fix time {}".format(elevator.number,elevator.floor, time_to_fix))
             hpq.heappush(self.events, Event(self.curr_time + time_to_fix, "elevator fix",
                                             floor.number,
                                             elevator.number))
@@ -167,7 +182,9 @@ class Simulation:
 
     def elevator_fix(self, event):
         elevator = event.elevator
-        self.elevators[elevator - 1].fix_elevator()
+        elevator = self.elevators[elevator - 1]
+        elevator.fix_elevator()
+        print("elevator {} fixed at floor {}".format(elevator.number, elevator.floor))
         hpq.heappush(self.events, Event(self.curr_time, "door open", event.floor, event.elevator))
 
     def order_elevator(self, floor, direction, desired_floor):
@@ -242,10 +259,14 @@ class Simulation:
                 elif event.event_type == "door close":
                     self.door_close(event)
                 # update  system time for clients
+            for floor in self.floors:
+                for client in floor.line:
+                    if not client.got_service and (self.curr_time - client.arrival_time) >15*60:
+                        self.abandoned += 1
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(True)  # saturday
+    sat_sim = Simulation(False) # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sat_sim.abandoned)
