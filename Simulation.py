@@ -235,9 +235,9 @@ class Simulation:
     def run(self):
         client = self.gen_client()
         hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
-        #if self.saturday:
-            #for elevator in self.elevators:
-               # hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
+        if self.saturday:
+            for elevator in self.elevators:
+                hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
         for i in range(1):
             # reset simulation
             while self.curr_time < self.simulation_time:
