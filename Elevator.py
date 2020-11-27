@@ -9,8 +9,10 @@ class Elevator:
         self.is_stuck = False
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
-        self.up_queue = []
-        self.down_queue = []  # push floors to queue with *-1 to maintain hpq pulling the max element, Simulation pushes
+        self.up_set = set()
+        self.down_set = set()
+        self.orders_up = set()  # will hold orders for next round
+        self.orders_down = set()  # will hold orders for next round
         self.doors_open = False
         self.up = True
         self.start = False  # flag if elevator was called yet or not
@@ -21,7 +23,6 @@ class Elevator:
                 self.floor = np.random.choice([0] + [i for i in range(16, 25)], 1)[0]  # returns a list, take arg 0
         else:
             self.floor = 0
-        self.orders = set()  # keeps track of orders being made
 
         if self.number <= 2:  # elevators 1,2
             self.service_floors = set([i for i in range(16)])
@@ -39,7 +40,7 @@ class Elevator:
         """
         if np.random.random(1) <= 0.0005:
             self.is_stuck = True
-            print(str(self.number) + 'is_stuck')
+            print(str(self.number) + ' is stuck')
             return True
         return False
 
@@ -47,40 +48,43 @@ class Elevator:
         self.is_stuck = False
 
     def add_to_queue(self, floors, direction):
-
         source_floor = floors[0]
-        target_floor = floors[1]
-        if source_floor not in self.orders and source_floor != self.floor:  # avoid negative numbers, use abs()
-            if source_floor > self.floor:
-                hpq.heappush(self.up_queue, source_floor)
-            else:
-                hpq.heappush(self.down_queue, source_floor*-1)
-            self.orders.add(abs(source_floor))  # add to set
-        if target_floor not in self.orders:
-            if direction == "up":
-                hpq.heappush(self.up_queue, target_floor)
-            else:
-                hpq.heappush(self.down_queue, target_floor*-1)
-            self.orders.add(abs(target_floor))
+        # add press button method so clients will be guaranteed to reach their dest if boarded
+        # roll orders to regular queues upon cycle finish
+        # target_floor = floors[1]
 
-    def is_full(self):
-        """
-        check if Elevator is full or not
-        :return:
-        """
-        return self.capacity == 15
+        # in case we passed client, get him the next round
+        if source_floor < self.floor and self.up and direction == "up":
+            self.orders_up.add(source_floor)
+        elif source_floor > self.floor and not self.up and direction == "down":
+            self.orders_down.add(source_floor)
+            # self.orders_down.add(target_floor)
+        # pick up client on the way up
+        elif source_floor > self.floor and self.up and direction == "up":
+            self.up_set.add(source_floor)
+
+            # self.up_set.add(target_floor)
+        # pick up client on the way down
+        elif source_floor < self.floor and not self.up and direction == "down":
+            self.down_set.add(source_floor)
+            # self.down_set.add(target_floor)
 
     def free_space(self):
         """
         calculate how many clients can board the Elevator
         :return: int
         """
-        return 15 - self.capacity
+        return 15 - len(self.clients)
 
     def remove_clients(self, clients_lst):
 
         self.doors_open = True
         for client in clients_lst:
+            # if not self.saturday:
+            #     if self.up and client.desired_floor == self.floor:
+            #         self.up_set.remove(self.floor)
+            #     elif not self.up and client.desired_floor == self.floor:
+            #         self.down_set.remove(self.floor)
             client.travelling = False
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
@@ -89,6 +93,16 @@ class Elevator:
         self.capacity -= len(clients_lst)
 
     def board_clients(self, clients_lst):
+        if not self.saturday:
+            for client in clients_lst:
+                if self.up:
+                    self.up_set.add(client.desired_floor)
+                else:
+                    if client.desired_floor not in self.service_floors:
+                        self.down_set.add(0)
+                    else:
+                        self.down_set.add(client.desired_floor)
+
         self.clients += clients_lst
         self.capacity += len(clients_lst)
         self.doors_open = False
@@ -120,53 +134,93 @@ class Elevator:
             if (self.up and self.floor in (15, 25)) or (not self.up and self.floor == 0):
                 self.up = not self.up
         else:
-            if self.up and self.up_queue:  # move elevator to next floor from queue
-                next_floor = hpq.heappop(self.up_queue)
-                self.orders.remove(next_floor)
+            # move to to source floor? ele on 0, request is 5 to 3 > will be pushed to down queue
+            # ele on 0, request from 0 to 16
+            # ele on 0, request from 0 to 5
+            # ele on 0, request from 20 to 16
+            # ######### RELOAD QUEUES ##############
+            if not self.up_set and self.orders_up:
+                self.up = self.orders_up
+                self.orders_up = set()
+            if not self.down_set and self.down_set:
+                self.down_set = self.orders_down
+                self.orders_down = set()
+            if self.up and not self.up_set and not self.down_set:  # moving up, queues empty
+                self.down_set = self.orders_down
+                self.orders_down = set()
+                self.up = False
+            elif not self.up and not self.up_set and not self.down_set:
+                self.up_set = self.orders_up
+                self.orders_up = set()
+                self.up = True
+            # ###################################
+            if self.floor == 0 and not self.orders_up and not self.orders_down and not self.up_set and not self.down_set:
+                if self.number <= 2:
+                    next_floor = 15
+                    self.floor = 15
+                    for i in range(15, 0, -1):
+                        self.down_set.add(i)
+                else:
+                    next_floor = 25
+                    self.floor = 25
+                    for i in range(24, 15, -1):
+                        self.down_set.add(i)
+                self.up = False
+                return 4+ abs(self.floor - next_floor)
+
+            elif self.up and self.up_set:
+                next_floor = min(self.up_set)
+                self.up_set.remove(next_floor)
                 travel_time = 4 + abs(self.floor - next_floor)
-            elif not self.up and self.down_queue:  # move elevator to next floor from queue
-                next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
-                self.orders.remove(next_floor)
+            elif not self.up and self.down_set:
+                next_floor = max(self.down_set)
+                self.down_set.remove(next_floor)
                 travel_time = 4 + abs(self.floor - next_floor)
-            elif self.up and not self.up_queue and self.down_queue:
-                next_floor = hpq.heappop(self.down_queue) * (-1)  # gets minimum
-                self.orders.remove(next_floor)
+            elif not self.up_set and not self.down_set:
+                next_floor = 0
+                self.up = True
+                if 0 in self.orders_up:
+                    self.orders_up.remove(0)
+                self.up_set = self.orders_up
+                self.orders_up = set()
+                self.down_set = self.orders_down
+                self.orders_down = set()
+                travel_time = 0
+            elif self.up_set:
+                next_floor = min(self.up_set)
+                self.up_set.remove(next_floor)
+                self.up = True
+                travel_time = 4 + abs(self.floor - next_floor)
+            elif self.down_set:
+                next_floor = max(self.down_set)
+                self.down_set.remove(next_floor)
                 travel_time = 4 + abs(self.floor - next_floor)
                 self.up = False
-            elif not self.up and not self.down_queue and self.up_queue:
-                next_floor = hpq.heappop(self.up_queue)
-                self.orders.remove(next_floor)
-                travel_time = 4 + abs(self.floor - next_floor)
-            elif self.up_queue:
-                next_floor = hpq.heappop(self.up_queue)
-                self.orders.remove(next_floor)
-                travel_time = 4 + abs(self.floor - next_floor)
+            elif self.orders_up:
+                next_floor = min(self.up_set)
+                self.up_set.remove(next_floor)
                 self.up = True
-            elif self.down_queue:
-                next_floor = hpq.heappop(self.down_queue) *(-1)
-                self.orders.remove(next_floor)
+                travel_time = 4 + abs(self.floor - next_floor)
+            elif self.orders_down:
+                next_floor = max(self.orders_down)
+                self.orders_down.remove(next_floor)
                 travel_time = 4 + abs(self.floor - next_floor)
                 self.up = False
 
             else:
                 next_floor = 0
-                travel_time = abs(self.floor - next_floor)
+                self.up = True
+                if 0 in self.orders_up:
+                    self.orders_up.remove(0)
+                travel_time = 0
+
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
-            if next_floor in (0, 16, 25) or (not self.up_queue and self.up) or (not self.down_queue and not self.up):
+            if next_floor in (16, 25) and self.up or next_floor == 0 and not self.up:
                 self.up = not self.up  # flip elevator direction
         for client in self.clients:
             client.travel()
         return travel_time
-
-    def press_button(self, floor, direction):
-        """
-        client will press this button to add floor to queue when the doors are open at his floor
-        :return: None
-        """
-        self.orders.add(floor)
-        if direction == "up":
-            self.up_queue.append(floor)
 
     @staticmethod
     def get_fix_time():

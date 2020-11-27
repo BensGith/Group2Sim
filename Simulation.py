@@ -25,7 +25,7 @@ class Simulation:
         self.current_event = None
         self.prv_event = None
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
-        self.service_dist = {60:0, 120:0, 180:0, 240:0, 300:0, "other":0 }
+        self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, "other": 0}
 
     def reset_simulation(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
@@ -107,7 +107,8 @@ class Simulation:
                 if not elevator.start:
                     if elevator.floor == current_floor and not elevator.doors_open and client.desired_floor in elevator.service_floors:
                         elevator.start = True  # elevator won't open while moving
-                        hpq.heappush(self.events, Event(client.arrival_time, "door open", current_floor, elevator.number))
+                        hpq.heappush(self.events,
+                                     Event(client.arrival_time, "door open", current_floor, elevator.number))
                         break  # open just one Elevator
             if client.need_swap:  # add current and target floors to queue
                 self.order_elevator(current_floor, "down", 0)
@@ -120,7 +121,7 @@ class Simulation:
                 self.order_elevator(current_floor, direction, client.desired_floor)
         # don't do anything if it's saturday, elevators
 
-        if self.curr_time < self.simulation_time and self.curr_time<=72000:
+        if self.curr_time < self.simulation_time and self.curr_time <= 72000:
             client = self.gen_client()
             hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
 
@@ -128,8 +129,9 @@ class Simulation:
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = False
-        print("Elevator {} closing at floor {} ob {}".format(elevator.number, elevator.number, len(elevator.clients),
-                                                                 ))
+        print("Elevator {} closing at floor {} ob {} dir {}".format(elevator.number, elevator.floor,
+                                                                    len(elevator.clients),
+                                                                    elevator.up))
         abandoned = floor.board_clients(elevator, self.curr_time)  # add clients that arrived before door closing
         self.abandoned += abandoned
         self.total_clients -= abandoned
@@ -145,11 +147,17 @@ class Simulation:
         elevator = self.elevators[event.elevator - 1]
         elevator.doors_open = True
         service_times = floor.drop_clients(elevator, self.curr_time)  # update Simulation metrics?
-        print("Elevator {} open at floor {} ob {} eos {}".format(elevator.number,floor.number,len(elevator.clients),len(service_times)))
+        if floor.number == 0 and not self.saturday:
+            for client in floor.line:
+                if client.got_service and not client.reorder:  # client swapping have to reorder
+                    self.order_elevator(0, "up", client.desired_floor)
+                    client.reorder = True
+        print("Elevator {} open at floor {} ob {} eos {}".format(elevator.number, floor.number, len(elevator.clients),
+                                                                 len(service_times)))
         self.total_clients -= len(service_times)  # remove clients that left from system
         for time in service_times:
             if time <= 60:
-                self.service_dist[60] +=1
+                self.service_dist[60] += 1
             elif time <= 120:
                 self.service_dist[120] += 1
             elif time <= 180:
@@ -200,9 +208,13 @@ class Simulation:
             # elevator not stuck and must be able to reach from client's floor to desired floor
             # desired floor will be 0 if client wants a swap
             # if one of the conditions is true, don't order that elevator!
-            if elevator.is_stuck or (floor not in elevator.service_floors or desired_floor not in elevator.service_floors):  # can't order that elevator
+            if elevator.is_stuck or (
+                    floor not in elevator.service_floors or desired_floor not in elevator.service_floors):  # can't order that elevator
                 continue
             score = 999
+            if not elevator.up_set or not elevator.down_set:
+                candidate_elevator = elevator.number - 1
+                break
             if elevator.up:  # elevator moving up
                 if elevator.floor < floor:  # client is above elevator
                     score = floor - elevator.floor
@@ -223,17 +235,12 @@ class Simulation:
     def run(self):
         client = self.gen_client()
         hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
-        if self.saturday:
-            for elevator in self.elevators:
-                hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
+        #if self.saturday:
+            #for elevator in self.elevators:
+               # hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
         for i in range(1):
             # reset simulation
             while self.curr_time < self.simulation_time:
-                # prv_event = None
-                # prv_minute = None
-                # current_minute = None
-                # event_time = 2
-                # prv_event_time = 1
                 event = hpq.heappop(self.events)
                 self.curr_time = event.time
                 # self.update_times(event_time, prv_event_time)
@@ -246,36 +253,15 @@ class Simulation:
                 elif event.event_type == "door close":
                     self.door_close(event)
                 # update  system time for clients
-                #print(len(self.floors[0].line))
-                if len(self.floors[0].line) > 20:
-                    print("p")
+                # print(len(self.floors[0].line))
             for floor in self.floors:
                 for client in floor.line:
-                    if (self.curr_time - client.arrival_time) > 15*60 and not client.got_service:
+                    if (self.curr_time - client.arrival_time) > 15 * 60 and not client.got_service:
                         self.abandoned += 1
+
 
 if __name__ == "__main__":
     sat_sim = Simulation(False)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sat_sim.abandoned)
-    ##### first arrival, taking the first elevator ######
-    # sat_sim.arriving()  # working
-    # event = hpq.heappop(sat_sim.events)
-    # sat_sim.curr_time = event.time
-    # sat_sim.door_open(event)
-    # event = sat_sim.events[1]
-    # sat_sim.curr_time = event.time
-    # sat_sim.door_close(event)
-    # event = sat_sim.events[2]
-    # sat_sim.curr_time = event.time
-    # sat_sim.door_open(event)
-    # event = sat_sim.events[3]
-    # sat_sim.curr_time = event.time
-    # sat_sim.door_close(event)
-
-    # event = Event()
-    # sat_sim.run()
-    # reg_sim = Simulation()
-    # reg_sim.run()
-    # problem with arrival events

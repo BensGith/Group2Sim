@@ -37,18 +37,18 @@ class Floor:
         dropped = 0
         leaving = []
         service_time = []
-        if len(elevator.clients) == 15:
-            print("sd")
         for client in elevator.clients:
             if self.number == client.desired_floor:  # client reached desired floor
                 client.time_in_sys = curr_time - client.arrival_time
                 service_time.append(client.time_in_sys)
                 leaving.append(client)
                 dropped += 1
+
             elif client.desired_floor not in elevator.service_floors and self.number == 0:  # go off elevator for swap
                 client.direction = True
                 leaving.append(client)
                 self.line.append(client)
+                # make client reorder an elevator!
                 dropped += 1
         if dropped > 0:
             hpq.heapify(self.line)
@@ -88,7 +88,10 @@ class Floor:
             for client in staying:
                 self.line.append(client)  # push clients back to line
             hpq.heapify(self.line)  # reorder line
+
         elevator.board_clients(boarding)  # board clients to elevator
+        if abandoned >0:
+            print("{} abandoned floor {}".format(abandoned,self.number))
         return abandoned
 
 if __name__ == "__main__":
