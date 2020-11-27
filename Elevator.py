@@ -216,7 +216,7 @@ class Elevator:
 
             self.floor = next_floor  # move elevator
             # top or bottom floor, or only 1 of the queues are empty
-            if next_floor in (16, 25) and self.up or next_floor == 0 and not self.up:
+            if next_floor in (15, 25) and self.up or next_floor == 0 and not self.up:
                 self.up = not self.up  # flip elevator direction
         for client in self.clients:
             client.travel()
