@@ -22,20 +22,24 @@ class Simulation:
         self.total_clients = 0
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
-        self.current_event = None
-        self.prv_event = None
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
-        self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, "other": 0}
+        # metrics to display
+        self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
+        self.service_times = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
+        self.elevator_mat = np.zeros((100, 4))  # 100 days per elevator
+        self.elevators_avg_cap = [0, 0, 0, 0]
+        self.abandoned_lst = []
 
     def reset_simulation(self, saturday=True):
         self.simulation_time = 60 * 60 * 24
-        self.curr_time = 0  # simulation clock
+        self.curr_time = 25200  # simulation clock starts at 7
         self.floors = [Floor(i) for i in range(26)]
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         self.events = []
-        self.total_clients = 0
         self.abandoned = 0
+        self.elevators_avg_cap = [0, 0, 0, 0]
         self.saturday = saturday  # working as a Saturday elevator
+        self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
 
     def find_hour(self, time):
         """
@@ -145,6 +149,7 @@ class Simulation:
 
         floor = self.floors[event.floor]
         elevator = self.elevators[event.elevator - 1]
+        self.update_elevator_capacity(elevator, event.time)  # add number of people to metrics
         elevator.doors_open = True
         service_times = floor.drop_clients(elevator, self.curr_time)  # update Simulation metrics?
         if floor.number == 0 and not self.saturday:
@@ -167,7 +172,7 @@ class Simulation:
             elif time <= 300:
                 self.service_dist[300] += 1
             else:
-                self.service_dist["other"] += 1
+                self.service_dist[1000] += 1
 
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
@@ -181,6 +186,10 @@ class Simulation:
         elevator = event.elevator
         self.elevators[elevator - 1].fix_elevator()
         hpq.heappush(self.events, Event(self.curr_time, "door open", event.floor, event.elevator))
+
+    def update_elevator_capacity(self, elevator, time):
+        self.elevators_avg_cap[elevator.number - 1] += len(elevator.clients) * (time - elevator.prv_open_time)
+        elevator.prv_open_time = time
 
     def order_elevator(self, floor, direction, desired_floor):
         """
@@ -233,13 +242,13 @@ class Simulation:
         elevator.add_to_queue([floor, desired_floor], direction)
 
     def run(self):
-        client = self.gen_client()
-        hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
-        if self.saturday:
-            for elevator in self.elevators:
-                hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
-        for i in range(1):
-            # reset simulation
+        for i in range(100):
+            self.reset_simulation(self.saturday)
+            client = self.gen_client()
+            hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
+            if self.saturday:
+                for elevator in self.elevators:
+                    hpq.heappush(self.events, Event(self.curr_time, "door open", elevator.floor, elevator.number))
             while self.curr_time < self.simulation_time:
                 event = hpq.heappop(self.events)
                 self.curr_time = event.time
@@ -252,16 +261,24 @@ class Simulation:
                     self.elevator_fix(event)
                 elif event.event_type == "door close":
                     self.door_close(event)
-                # update  system time for clients
-                # print(len(self.floors[0].line))
             for floor in self.floors:
                 for client in floor.line:
                     if (self.curr_time - client.arrival_time) > 15 * 60 and not client.got_service:
                         self.abandoned += 1
+            avg_cap = list(map(lambda x: x / (self.curr_time - 25200), self.elevators_avg_cap))
+            self.abandoned_lst.append(self.abandoned)
+            for key, value in self.service_dist.items():
+                self.service_times[key] += value
+            for j in range(len(avg_cap)):
+                self.elevator_mat[i][j] = avg_cap[j]
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(False)  # saturday
+    sat_sim = Simulation(True)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
-    print(sat_sim.abandoned)
+    print(sum(sat_sim.abandoned_lst)/100)
+    print(list(map(lambda x: x/100, sat_sim.elevator_mat.sum(axis=0))))  # avg capacity per elevator
+    service_times = list(map(lambda x: x[1]/100, sorted([[key, value] for key, value in sat_sim.service_times.items()],
+                                                   key=lambda x: x[0])))
+    print(service_times)

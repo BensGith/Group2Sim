@@ -16,6 +16,7 @@ class Elevator:
         self.doors_open = False
         self.up = True
         self.start = False  # flag if elevator was called yet or not
+        self.prv_open_time = 25200
         if self.saturday:  # start elevator at random floor on saturday
             if self.number <= 2:  # for elevators 1,2 start from 0 - 15
                 self.floor = np.random.choice([i for i in range(16)], 1)[0]  # returns a list, take arg 0
@@ -80,11 +81,6 @@ class Elevator:
 
         self.doors_open = True
         for client in clients_lst:
-            # if not self.saturday:
-            #     if self.up and client.desired_floor == self.floor:
-            #         self.up_set.remove(self.floor)
-            #     elif not self.up and client.desired_floor == self.floor:
-            #         self.down_set.remove(self.floor)
             client.travelling = False
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
@@ -157,16 +153,18 @@ class Elevator:
             if self.floor == 0 and not self.orders_up and not self.orders_down and not self.up_set and not self.down_set:
                 if self.number <= 2:
                     next_floor = 15
+                    current = self.floor
                     self.floor = 15
-                    for i in range(15, 0, -1):
+                    for i in range(14, -1, -1):
                         self.down_set.add(i)
                 else:
                     next_floor = 25
+                    current = self.floor
                     self.floor = 25
-                    for i in range(24, 15, -1):
+                    for i in range(24, 14, -1):
                         self.down_set.add(i)
                 self.up = False
-                return 4+ abs(self.floor - next_floor)
+                return 4+ abs(current - next_floor)
 
             elif self.up and self.up_set:
                 next_floor = min(self.up_set)
