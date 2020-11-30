@@ -15,8 +15,8 @@ from Client import Client
 # noinspection DuplicatedCode
 class Simulation:
     def __init__(self, saturday=True):
-        self.simulation_time = 60 * 60 * 24
-        self.curr_time = 25200  # simulation clock starts at 7
+        self.simulation_time = 60 * 60 * 20
+        self.curr_time = 21600  # simulation clock starts at 6
         self.floors = [Floor(i) for i in range(26)]
         self.events = []
         self.total_clients = 0
@@ -24,15 +24,16 @@ class Simulation:
         self.saturday = saturday  # working as a Saturday elevator
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         # metrics to display
+
         self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
         self.service_times = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
+        self.capacity_dist = {i: 0 for i in range(16)}  # time distribution of number of passengers in the elevators
         self.elevator_mat = np.zeros((100, 4))  # 100 days per elevator
         self.elevators_avg_cap = [0, 0, 0, 0]
         self.abandoned_lst = []
 
-    def reset_simulation(self, saturday=True):
-        self.simulation_time = 60 * 60 * 24
-        self.curr_time = 25200  # simulation clock starts at 7
+    def reset_simulation(self, saturday):
+        self.curr_time = 21600  # simulation clock starts at 6
         self.floors = [Floor(i) for i in range(26)]
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         self.events = []
@@ -40,26 +41,6 @@ class Simulation:
         self.elevators_avg_cap = [0, 0, 0, 0]
         self.saturday = saturday  # working as a Saturday elevator
         self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
-
-    def find_hour(self, time):
-        """
-        function returns which hour of the day is it
-        :param time: curr_time, simulation clock
-        :return: hour of day (0,1,2,3..23)
-        """
-        # if sim clock is between 0 and 59.9 return 0, between 60 and 119.9 return 1..
-        # floor 60 modulo 24 of sim clock is the hour
-        # time floor 24*60 is the day number of the simulation
-        # will serve as i,j for system_history
-        return int((time // 60) % 24)
-
-    def find_day(self, time):
-        """
-        get the day number of simulation
-        :param time: curr_time, simulation clock
-        :return: day of simulation (0,1..9)
-        """
-        return int(time // (24 * 60))
 
     def gen_client(self):
         morning = [150, 400, 90, 84, 60, 120, 60, 36]
@@ -189,7 +170,9 @@ class Simulation:
 
     def update_elevator_capacity(self, elevator, time):
         self.elevators_avg_cap[elevator.number - 1] += len(elevator.clients) * (time - elevator.prv_open_time)
+        self.capacity_dist[len(elevator.clients)] += (time - elevator.prv_open_time)
         elevator.prv_open_time = time
+
 
     def order_elevator(self, floor, direction, desired_floor):
         """
@@ -265,7 +248,7 @@ class Simulation:
                 for client in floor.line:
                     if (self.curr_time - client.arrival_time) > 15 * 60 and not client.got_service:
                         self.abandoned += 1
-            avg_cap = list(map(lambda x: x / (self.curr_time - 25200), self.elevators_avg_cap))
+            avg_cap = list(map(lambda x: x / (self.curr_time - 21600), self.elevators_avg_cap))
             self.abandoned_lst.append(self.abandoned)
             for key, value in self.service_dist.items():
                 self.service_times[key] += value
@@ -273,12 +256,18 @@ class Simulation:
                 self.elevator_mat[i][j] = avg_cap[j]
 
 
+
 if __name__ == "__main__":
-    sat_sim = Simulation(True)  # saturday
+    sat_sim = Simulation(False)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sum(sat_sim.abandoned_lst)/100)
     print(list(map(lambda x: x/100, sat_sim.elevator_mat.sum(axis=0))))  # avg capacity per elevator
     service_times = list(map(lambda x: x[1]/100, sorted([[key, value] for key, value in sat_sim.service_times.items()],
                                                    key=lambda x: x[0])))
+    capacity_dist = list(
+        map(lambda x: x[1] /(4 *60 * 60 * 14), sorted([[key, value] for key, value in sat_sim.capacity_dist.items()],
+                                         key=lambda x: x[0])))  # didn't divide to maintain precentage
     print(service_times)
+    print(capacity_dist)
+    print(sum(capacity_dist))

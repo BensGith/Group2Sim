@@ -16,7 +16,7 @@ class Elevator:
         self.doors_open = False
         self.up = True
         self.start = False  # flag if elevator was called yet or not
-        self.prv_open_time = 25200
+        self.prv_open_time = 21600
         if self.saturday:  # start elevator at random floor on saturday
             if self.number <= 2:  # for elevators 1,2 start from 0 - 15
                 self.floor = np.random.choice([i for i in range(16)], 1)[0]  # returns a list, take arg 0
