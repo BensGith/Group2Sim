@@ -5,14 +5,12 @@ class Floor:
     def __init__(self, number):
         self.number = number
         self.line = []  # priority queue
-        self.n_clients = 0
 
     def __repr__(self):
-        return "Floor: {}, Clients {}".format(self.number, self.n_clients)
+        return "Floor: {}, Clients {}".format(self.number, len(self.line))
 
     def add_to_line(self, client):
         hpq.heappush(self.line, client)
-        self.n_clients += 1
 
     def remove_from_line(self, client):
         self.line.remove(client)
@@ -22,11 +20,7 @@ class Floor:
         use this method to order the line after client abandoning
         :return:
         """
-        hpq.heapify(self.line)
-        
-    def update_client_time(self, time):
-        for client in self.line:
-            client.add_wait_time(time)
+        hpq.heapify(self.line)  # reorder the line
 
     def drop_clients(self, elevator, curr_time):
         """
@@ -76,12 +70,10 @@ class Floor:
                 boarding.append(client)
                 client.travelling = True
                 client.need_swap = False
-                self.n_clients -= 1  # update number of staying in the floor
             elif elevator.up == client.direction and client.desired_floor in elevator.service_floors:
                 client.got_service = True
                 boarding.append(client)
                 client.travelling = True
-                self.n_clients -= 1  # update number of staying in the floor
             else:
                 staying.append(client)
         if staying:
@@ -90,7 +82,7 @@ class Floor:
             hpq.heapify(self.line)  # reorder line
 
         elevator.board_clients(boarding)  # board clients to elevator
-        if abandoned >0:
+        if abandoned > 0:
             print("{} abandoned floor {}".format(abandoned,self.number))
         return abandoned
 

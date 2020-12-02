@@ -1,11 +1,9 @@
 import numpy as np
-import heapq as hpq
 
 
 class Elevator:
     def __init__(self, number, saturday):
         self.number = number
-        self.capacity = 0
         self.is_stuck = False
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
@@ -32,7 +30,7 @@ class Elevator:
             self.service_floors.add(0)
 
     def __repr__(self):
-        return "Elevator {}, {} clients at floor {}".format(self.number, self.capacity, self.floor)
+        return "Elevator {}, {} clients at floor {}".format(self.number, len(self.clients), self.floor)
 
     def stuck(self):
         """
@@ -59,16 +57,12 @@ class Elevator:
             self.orders_up.add(source_floor)
         elif source_floor > self.floor and not self.up and direction == "down":
             self.orders_down.add(source_floor)
-            # self.orders_down.add(target_floor)
         # pick up client on the way up
         elif source_floor > self.floor and self.up and direction == "up":
             self.up_set.add(source_floor)
-
-            # self.up_set.add(target_floor)
         # pick up client on the way down
         elif source_floor < self.floor and not self.up and direction == "down":
             self.down_set.add(source_floor)
-            # self.down_set.add(target_floor)
 
     def free_space(self):
         """
@@ -86,7 +80,6 @@ class Elevator:
             client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
 
-        self.capacity -= len(clients_lst)
 
     def board_clients(self, clients_lst):
         if not self.saturday:
@@ -100,7 +93,6 @@ class Elevator:
                         self.down_set.add(client.desired_floor)
 
         self.clients += clients_lst
-        self.capacity += len(clients_lst)
         self.doors_open = False
 
     def travel(self):

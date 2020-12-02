@@ -4,7 +4,7 @@ from Event import Event
 from Floor import Floor
 from Elevator import Elevator
 from Client import Client
-
+import matplotlib.pyplot as plt
 
 # Assumption - the line in the floor is determined by time spent in floor
 # Assumption - if client boarded and elevator got stuck, clients are pushed to the back of the line
@@ -19,7 +19,6 @@ class Simulation:
         self.curr_time = 21600  # simulation clock starts at 6
         self.floors = [Floor(i) for i in range(26)]
         self.events = []
-        self.total_clients = 0
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
@@ -81,11 +80,9 @@ class Simulation:
 
     def arriving(self, event):
         client = event.client
-        self.total_clients += 1  # add to total count
         current_floor = client.current_floor  # current floor number, use as index to access floor list
         self.floors[current_floor].add_to_line(client)  # add client to floor's line
         # search for elevator in this floor
-        service = False
         if not self.saturday:
             for elevator in self.elevators:
                 # there is an Elevator in the desired floor with closed doors, open doors
@@ -98,7 +95,7 @@ class Simulation:
             if client.need_swap:  # add current and target floors to queue
                 self.order_elevator(current_floor, "down", 0)
             else:  # client doesn't need swap
-                direction = None
+                direction = None  # if client arrived to a floor with an open elevator, do nothing
                 if client.current_floor > client.desired_floor:
                     direction = "down"
                 elif client.current_floor < client.desired_floor:
@@ -106,9 +103,8 @@ class Simulation:
                 self.order_elevator(current_floor, direction, client.desired_floor)
         # don't do anything if it's saturday, elevators
 
-        if self.curr_time < self.simulation_time and self.curr_time <= 72000:
-            client = self.gen_client()
-            hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
+        client = self.gen_client()
+        hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
 
     def door_close(self, event):
         floor = self.floors[event.floor]
@@ -119,7 +115,6 @@ class Simulation:
                                                                     elevator.up))
         abandoned = floor.board_clients(elevator, self.curr_time)  # add clients that arrived before door closing
         self.abandoned += abandoned
-        self.total_clients -= abandoned
         travel_time = elevator.travel()  # pops floor from queue and moves the elevator to next floor
         print("Elevator {} arrived at floor {} ob {}".format(elevator.number, elevator.floor, len(elevator.clients),
                                                              ))
@@ -140,20 +135,7 @@ class Simulation:
                     client.reorder = True
         print("Elevator {} open at floor {} ob {} eos {}".format(elevator.number, floor.number, len(elevator.clients),
                                                                  len(service_times)))
-        self.total_clients -= len(service_times)  # remove clients that left from system
-        for time in service_times:
-            if time <= 60:
-                self.service_dist[60] += 1
-            elif time <= 120:
-                self.service_dist[120] += 1
-            elif time <= 180:
-                self.service_dist[180] += 1
-            elif time <= 240:
-                self.service_dist[240] += 1
-            elif time <= 300:
-                self.service_dist[300] += 1
-            else:
-                self.service_dist[1000] += 1
+        self.update_service_dist(service_times)
 
         if elevator.stuck():
             time_to_fix = Elevator.get_fix_time()
@@ -167,12 +149,6 @@ class Simulation:
         elevator = event.elevator
         self.elevators[elevator - 1].fix_elevator()
         hpq.heappush(self.events, Event(self.curr_time, "door open", event.floor, event.elevator))
-
-    def update_elevator_capacity(self, elevator, time):
-        self.elevators_avg_cap[elevator.number - 1] += len(elevator.clients) * (time - elevator.prv_open_time)
-        self.capacity_dist[len(elevator.clients)] += (time - elevator.prv_open_time)
-        elevator.prv_open_time = time
-
 
     def order_elevator(self, floor, direction, desired_floor):
         """
@@ -224,6 +200,60 @@ class Simulation:
         elevator = self.elevators[candidate_elevator]
         elevator.add_to_queue([floor, desired_floor], direction)
 
+    def update_service_dist(self, service_lst):
+        for time in service_lst:
+            if time <= 60:
+                self.service_dist[60] += 1
+            elif time <= 120:
+                self.service_dist[120] += 1
+            elif time <= 180:
+                self.service_dist[180] += 1
+            elif time <= 240:
+                self.service_dist[240] += 1
+            elif time <= 300:
+                self.service_dist[300] += 1
+            else:
+                self.service_dist[1000] += 1
+
+    def update_elevator_capacity(self, elevator, time):
+        self.elevators_avg_cap[elevator.number - 1] += len(elevator.clients) * (time - elevator.prv_open_time)
+        self.capacity_dist[len(elevator.clients)] += (time - elevator.prv_open_time)
+        elevator.prv_open_time = time
+
+    def plot_service_times(self):
+        """
+        plot service times
+        :param matrix: system history matrix
+        :return: None
+        """
+        y = list(
+            map(lambda x: x[1] / 100, sorted([[key, value] for key, value in sat_sim.service_times.items()],
+                                             key=lambda x: x[0])))
+        x = ["T<60", "60<T<120", "120<T<180", "180<T<240", "240<T<300", "T>300"]
+        plt.bar(x, y, align='center')
+        plt.xticks(x)
+        plt.xlabel('Service Times')
+        plt.ylabel('Clients')
+        plt.title('Number of clients for each service time group')
+        plt.show()
+
+    def plot_capcity_dist(self):
+        """
+        plot service times
+        :param matrix: system history matrix
+        :return: None
+        """
+        y = list(
+        map(lambda x: x[1] /(4 *60 * 60 * 14), sorted([[key, value] for key, value in sat_sim.capacity_dist.items()],
+                                         key=lambda x: x[0])))  # didn't divide to maintain percentage
+        x = [i for i in range(16)]
+        plt.bar(x, y, align='center')
+        plt.xticks(x)
+        plt.xlabel('Elevator Capacity')
+        plt.ylabel('Percentage of time')
+        plt.title('Percentage of time vs Capacity')
+        plt.show()
+
     def run(self):
         for i in range(100):
             self.reset_simulation(self.saturday)
@@ -235,7 +265,6 @@ class Simulation:
             while self.curr_time < self.simulation_time:
                 event = hpq.heappop(self.events)
                 self.curr_time = event.time
-                # self.update_times(event_time, prv_event_time)
                 if event.event_type == "arriving":
                     self.arriving(event)
                 elif event.event_type == "door open":
@@ -256,9 +285,8 @@ class Simulation:
                 self.elevator_mat[i][j] = avg_cap[j]
 
 
-
 if __name__ == "__main__":
-    sat_sim = Simulation(False)  # saturday
+    sat_sim = Simulation(True)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sum(sat_sim.abandoned_lst)/100)
@@ -267,7 +295,9 @@ if __name__ == "__main__":
                                                    key=lambda x: x[0])))
     capacity_dist = list(
         map(lambda x: x[1] /(4 *60 * 60 * 14), sorted([[key, value] for key, value in sat_sim.capacity_dist.items()],
-                                         key=lambda x: x[0])))  # didn't divide to maintain precentage
+                                         key=lambda x: x[0])))  # didn't divide to maintain percentage
+    sat_sim.plot_capcity_dist()
     print(service_times)
     print(capacity_dist)
     print(sum(capacity_dist))
+    sat_sim.plot_service_times()
