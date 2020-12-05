@@ -261,8 +261,6 @@ class Simulation:
             np.random.seed(i+1)
             self.reset_simulation(self.saturday)
             client = self.gen_client()
-            if i ==1:
-                print("sd")
             hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
             if self.saturday:
                 for elevator in self.elevators:
@@ -291,7 +289,7 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(True)  # saturday
+    sat_sim = Simulation(False)  # saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sum(sat_sim.abandoned_lst)/100)
