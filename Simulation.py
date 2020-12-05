@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 # noinspection DuplicatedCode
 class Simulation:
     def __init__(self, saturday=True):
+
         self.simulation_time = 60 * 60 * 20
         self.curr_time = 21600  # simulation clock starts at 6
         self.floors = [Floor(i) for i in range(26)]
@@ -229,12 +230,12 @@ class Simulation:
         y = list(
             map(lambda x: x[1] / 100, sorted([[key, value] for key, value in sat_sim.service_times.items()],
                                              key=lambda x: x[0])))
-        x = ["T<60", "60<T<120", "120<T<180", "180<T<240", "240<T<300", "T>300"]
+        x = ["T<1", "1<T<2", "2<T<3", "3<T<4", "4<T<5", "T>5"]
         plt.bar(x, y, align='center')
         plt.xticks(x)
-        plt.xlabel('Service Times')
-        plt.ylabel('Clients')
-        plt.title('Number of clients for each service time group')
+        plt.xlabel('Service Time [min]')
+        plt.ylabel('Number of Clients')
+        plt.title('Service Time Distribution')
         plt.show()
 
     def plot_capcity_dist(self):
@@ -249,15 +250,19 @@ class Simulation:
         x = [i for i in range(16)]
         plt.bar(x, y, align='center')
         plt.xticks(x)
-        plt.xlabel('Elevator Capacity')
-        plt.ylabel('Percentage of time')
-        plt.title('Percentage of time vs Capacity')
+        plt.xlabel('Number of Clients')
+        plt.ylabel('Percentage of Time [%]')
+        plt.title('Elevator Capacity Distribution')
         plt.show()
 
     def run(self):
+
         for i in range(100):
+            np.random.seed(i+1)
             self.reset_simulation(self.saturday)
             client = self.gen_client()
+            if i ==1:
+                print("sd")
             hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))
             if self.saturday:
                 for elevator in self.elevators:

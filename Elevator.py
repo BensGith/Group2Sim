@@ -7,19 +7,17 @@ class Elevator:
         self.is_stuck = False
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
-        self.up_set = set()
-        self.down_set = set()
+        self.up_set = set()  # current queue
+        self.down_set = set() # current queue
         self.orders_up = set()  # will hold orders for next round
         self.orders_down = set()  # will hold orders for next round
         self.doors_open = False
-        self.up = True
+        self.up = True  # direction of the elevator
         self.start = False  # flag if elevator was called yet or not
         self.prv_open_time = 21600
+        self.gen_floors = {1: 2, 2: 10, 3: 17, 4: 20}
         if self.saturday:  # start elevator at random floor on saturday
-            if self.number <= 2:  # for elevators 1,2 start from 0 - 15
-                self.floor = np.random.choice([i for i in range(16)], 1)[0]  # returns a list, take arg 0
-            else:  # for elevators 3,4 start from 0 or 16-25
-                self.floor = np.random.choice([0] + [i for i in range(16, 25)], 1)[0]  # returns a list, take arg 0
+            self.floor = self.gen_floors.get(self.number)
         else:
             self.floor = 0
 
@@ -79,7 +77,6 @@ class Elevator:
             client.floor_time = 0
             client.current_floor = self.floor  # update client's current floor
             self.clients.remove(client)
-
 
     def board_clients(self, clients_lst):
         if not self.saturday:
@@ -156,7 +153,7 @@ class Elevator:
                     for i in range(24, 14, -1):
                         self.down_set.add(i)
                 self.up = False
-                return 4+ abs(current - next_floor)
+                return 4 + abs(current - next_floor)
 
             elif self.up and self.up_set:
                 next_floor = min(self.up_set)
