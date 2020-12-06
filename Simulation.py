@@ -6,10 +6,7 @@ from Elevator import Elevator
 from Client import Client
 import matplotlib.pyplot as plt
 
-# Assumption - the line in the floor is determined by time spent in floor
-# Assumption - if client boarded and elevator got stuck, clients are pushed to the back of the line
-# Assumption - if client ordered an elevator and it's full it WILL STOP in that floor like a real elevator
-# Assumption - lines are sorted by arrival time
+# ****** how to run the simulation - default mode is set to Saturday ******
 
 
 # noinspection DuplicatedCode
@@ -17,14 +14,14 @@ class Simulation:
     def __init__(self, saturday=True):
 
         self.simulation_time = 60 * 60 * 20
-        self.curr_time = 21600  # simulation clock starts at 6
+        self.curr_time = 21600  # simulation clock starts at 6am
         self.floors = [Floor(i) for i in range(26)]
         self.events = []
         self.abandoned = 0
         self.saturday = saturday  # working as a Saturday elevator
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
-        # metrics to display
 
+        # metrics to display
         self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
         self.service_times = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
         self.capacity_dist = {i: 0 for i in range(16)}  # time distribution of number of passengers in the elevators
@@ -289,7 +286,7 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    sat_sim = Simulation(False)  # saturday
+    sat_sim = Simulation(True)  # True if it's Saturday
     sat_sim.run()
     print(sat_sim.service_dist)
     print(sum(sat_sim.abandoned_lst)/100)
@@ -304,3 +301,4 @@ if __name__ == "__main__":
     print(capacity_dist)
     print(sum(capacity_dist))
     sat_sim.plot_service_times()
+
