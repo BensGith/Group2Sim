@@ -30,7 +30,7 @@ class Simulation:
         self.abandoned_lst = []
 
     def reset_simulation(self, saturday):
-        self.curr_time = 21600  # simulation clock starts at 6
+        self.curr_time = 21600  # simulation clock starts at 6am
         self.floors = [Floor(i) for i in range(26)]
         self.elevators = [Elevator(i, saturday) for i in range(1, 5)]
         self.events = []
@@ -40,6 +40,7 @@ class Simulation:
         self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}
 
     def gen_client(self):
+        # initializing the arrival rates
         morning = [150, 400, 90, 84, 60, 120, 60, 36]
         afternoon = [90, 120, 150, 84, 60, 400, 60, 36]
         other = [60, 70, 60, 84, 60, 70, 60, 36]
@@ -99,7 +100,7 @@ class Simulation:
                 elif client.current_floor < client.desired_floor:
                     direction = "up"
                 self.order_elevator(current_floor, direction, client.desired_floor)
-        # don't do anything if it's saturday, elevators
+        # don't do anything if it's Saturday elevators
 
         client = self.gen_client()
         hpq.heappush(self.events, Event(client.arrival_time, "arriving", None, None, client))

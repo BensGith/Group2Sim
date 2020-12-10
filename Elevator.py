@@ -8,7 +8,7 @@ class Elevator:
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
         self.up_set = set()  # current queue
-        self.down_set = set() # current queue
+        self.down_set = set()  # current queue
         self.orders_up = set()  # will hold orders for next round
         self.orders_down = set()  # will hold orders for next round
         self.doors_open = False
@@ -123,7 +123,7 @@ class Elevator:
             # ele on 0, request from 0 to 16
             # ele on 0, request from 0 to 5
             # ele on 0, request from 20 to 16
-            # ######### RELOAD QUEUES ##############
+            # ######### RELOAD QUEUES #########
             if not self.up_set and self.orders_up:
                 self.up = self.orders_up
                 self.orders_up = set()

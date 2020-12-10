@@ -22,14 +22,11 @@ class Client:
             self.direction = False
 
     def __repr__(self):
-        return "Client arrival time {}, cf {}, df {}, ns {}".format( self.arrival_time,
-                                                                     self.current_floor,
-                                                                     self.desired_floor,
-                                                                     self.need_swap)
+        return "Client's arrival time is {}, current floor {}, desired floor {}, and need swap? {}".format(
+                                            self.arrival_time, self.current_floor, self.desired_floor, self.need_swap)
 
     def __lt__(self, other):
         return self.arrival_time < other.arrival_time
-
 
     def add_wait_time(self, time):
         self.floor_time += time
@@ -46,7 +43,7 @@ if __name__ == "__main__":
     lst1 = [Client(0, 1), Client(0, 2)]
     c = lst1[0]
     lst1.remove(c)
-    lst2 =[]
+    lst2 = []
     lst2.append(c)
     print(lst1)
     print(lst2)
