@@ -82,8 +82,6 @@ class Floor:
             hpq.heapify(self.line)  # reorder line
 
         elevator.board_clients(boarding)  # board clients to elevator
-        if abandoned > 0:
-            print("{} abandoned floor {}".format(abandoned,self.number))
         return abandoned
 
 

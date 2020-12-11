@@ -3,8 +3,8 @@ import numpy as np
 
 class Elevator:
     def __init__(self, number, saturday):
-        self.number = number
-        self.is_stuck = False
+        self.number = number # number of the elevator
+        self.is_stuck = False # flag that indicates if the elevator is stuck
         self.clients = []  # client in elevator
         self.saturday = saturday  # defines saturday elevator behaviour
         self.up_set = set()  # current queue
@@ -14,8 +14,8 @@ class Elevator:
         self.doors_open = False
         self.up = True  # direction of the elevator
         self.start = False  # flag if elevator was called yet or not
-        self.prv_open_time = 21600
-        self.gen_floors = {1: 2, 2: 10, 3: 17, 4: 20}
+        self.prv_open_time = 21600  # previous time the elevator was open at
+        self.gen_floors = {1: 2, 2: 10, 3: 17, 4: 20}  # switch case for generating initial floors
         if self.saturday:  # start elevator at random floor on saturday
             self.floor = self.gen_floors.get(self.number)
         else:
@@ -37,7 +37,6 @@ class Elevator:
         """
         if np.random.random(1) <= 0.0005:
             self.is_stuck = True
-            print(str(self.number) + ' is stuck')
             return True
         return False
 
@@ -70,6 +69,11 @@ class Elevator:
         return 15 - len(self.clients)
 
     def remove_clients(self, clients_lst):
+        """
+        removes client object from Elevator
+        :param clients_lst: clients to be removed (from Floor object)
+        :return:
+        """
 
         self.doors_open = True
         for client in clients_lst:
@@ -79,6 +83,11 @@ class Elevator:
             self.clients.remove(client)
 
     def board_clients(self, clients_lst):
+        """
+        board clients to Elevator (get list from Floor object)
+        :param clients_lst:
+        :return:
+        """
         if not self.saturday:
             for client in clients_lst:
                 if self.up:
@@ -95,6 +104,14 @@ class Elevator:
     def travel(self):
         """
         pop floor out of queue, move elevator, flip elevator direction if necessary
+        there are 4 queues for each elevator:
+            up_set is the current queue for the elevator going up
+            down_set is the current queue for the elevator going down
+            orders_up is the next up queue - when the elevator goes down and up_set and down_set
+            are empty, load orders_up to up_set to work on current queue
+            orders_up and orders_down, hold the "next round" of floors for the elevator when  it will
+            finish the current round.
+            SEE FURTHER EXPLANATION IN Elevator.add_to_queue method
         :return: time of travel between floors
         """
         if self.saturday:
@@ -217,7 +234,3 @@ class Elevator:
         """
         return np.random.uniform(5 * 60, 15 * 60)
 
-
-if __name__ == "__main__":
-    print(bool([1, 23]), bool([]))
-    pass

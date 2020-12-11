@@ -2,13 +2,13 @@ class Client:
     def __init__(self, current_floor, desired_floor, arrival_time):
         self.arrival_time = arrival_time
         self.desired_floor = desired_floor
-        self.time_in_sys = 0
-        self.floor_time = 0
-        self.travelling = False
-        self.current_floor = current_floor
-        self.direction = None
-        self.got_service = False
-        self.reorder = False
+        self.time_in_sys = 0  # client's overall time in the system
+        self.floor_time = 0  # client's floor time
+        self.travelling = False # set flag if client is moving the elevator
+        self.current_floor = current_floor # client's current floor
+        self.direction = None  # direction the client wants to go up/down
+        self.got_service = False  # flag to track if client ever boarded an elevator
+        self.reorder = False # if client switched elevator, value will be true
         if (1 <= current_floor <= 15 and desired_floor >= 16) or (current_floor >= 16 and desired_floor <= 15 and desired_floor != 0):
             self.need_swap = True  # use for ordering elevators in Simulation
         else:
@@ -37,13 +37,3 @@ class Client:
     def travel(self):
         self.travelling = True
         self.floor_time = 0  # push client to end of line
-
-
-if __name__ == "__main__":
-    lst1 = [Client(0, 1), Client(0, 2)]
-    c = lst1[0]
-    lst1.remove(c)
-    lst2 = []
-    lst2.append(c)
-    print(lst1)
-    print(lst2)
