@@ -6,7 +6,8 @@ from Elevator import Elevator
 from Client import Client
 import matplotlib.pyplot as plt
 
-# ****** how to run the simulation - default mode is set to Saturday ******
+
+# ##### default mode is set to Saturday #####
 
 
 # noinspection DuplicatedCode
@@ -18,10 +19,10 @@ class Simulation:
         self.floors = [Floor(i) for i in range(26)]  # creates 25 Floor objects
         self.events = []  # events heap
         self.abandoned = 0  # number of abandoning clients
-        self.saturday = saturday  # working as a Saturday/Regular elevator (True/False)
-        self.elevators = [Elevator(i, saturday) for i in range(1, 5)] # create 4 Elevator objects
+        self.saturday = saturday  # working as a Saturday/Suggested elevator (True/False)
+        self.elevators = [Elevator(i, saturday) for i in range(1, 5)]  # create 4 Elevator objects
 
-        # ######### metrics to display ##############
+        # ##### metrics to display #####
         # create service times distribution dictionary
         self.service_dist = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}  # overall
         self.service_times = {60: 0, 120: 0, 180: 0, 240: 0, 300: 0, 1000: 0}  # temporary
@@ -33,7 +34,7 @@ class Simulation:
     def reset_simulation(self, saturday):
         """
         method to reset a simulation day  to start the day
-        :param saturday: boolean, depending on the Saturday/Regular mode
+        :param saturday: boolean, depending on the Saturday/Suggested mode
         :return: None
         """
         self.curr_time = 21600  # simulation clock starts at 6am
@@ -275,7 +276,7 @@ class Simulation:
         if self.saturday:
             plt.title('Service Time Distribution - Saturday')
         else:
-            plt.title('Service Time Distribution - Regular')
+            plt.title('Service Time Distribution - Suggested')
         plt.show()
 
     def plot_capcity_dist(self):
@@ -295,7 +296,7 @@ class Simulation:
         if self.saturday:
             plt.title('Elevator Capacity Distribution - Saturday')
         else:
-            plt.title('Elevator Capacity Distribution - Regular')
+            plt.title('Elevator Capacity Distribution - Suggested')
         plt.show()
 
     def run(self):
@@ -341,10 +342,12 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    # ##### Saturday Mode ##############
-    print('\n###### Saturday Mode ##############')
+    # ##### Saturday Mode #####
+    print('\n##### Saturday Mode #####')
+    print('\nSimulation is running...')
     sat_sim = Simulation(True)  # True if it's Saturday
     sat_sim.run()  # starting the simulation on Saturday mode
+    print('Done!')
     print("\nAverage Number of Abandoning Clients: {}".format(sum(sat_sim.abandoned_lst) / 100))
     print("\nAverage Elevators Capacity:\n")
     print(list(map(lambda x: x/100, sat_sim.elevator_mat.sum(axis=0))))  # avg capacity per elevator
@@ -360,10 +363,12 @@ if __name__ == "__main__":
     print(capacity_dist)
     sat_sim.plot_service_times()
 
-    # ###### Regular Mode ##############
-    print('\n######## Regular Mode ##############')
+    # ##### Suggested Mode #####
+    print('\n##### Suggested Mode #####')
+    print('\nSimulation is running...')
     reg_sim = Simulation(False)  # True if it's Saturday
     reg_sim.run()  # starting the simulation on Saturday mode
+    print('Done!')
     print("\nAverage Number of Abandoning Clients: {}".format(sum(reg_sim.abandoned_lst) / 100))
     print("\nAverage Elevators Capacity:\n")
     print(list(map(lambda x: x / 100, reg_sim.elevator_mat.sum(axis=0))))  # avg capacity per elevator
@@ -379,7 +384,4 @@ if __name__ == "__main__":
     print("\nElevator Capacity Distribution Graph Values\n")
     print(capacity_dist)
     reg_sim.plot_service_times()
-
-
-
 

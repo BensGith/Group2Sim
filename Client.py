@@ -4,8 +4,8 @@ class Client:
         self.desired_floor = desired_floor
         self.time_in_sys = 0  # client's overall time in the system
         self.floor_time = 0  # client's floor time
-        self.travelling = False # set flag if client is moving the elevator
-        self.current_floor = current_floor # client's current floor
+        self.travelling = False  # set flag if client is moving the elevator
+        self.current_floor = current_floor  # client's current floor
         self.direction = None  # direction the client wants to go up/down
         self.got_service = False  # flag to track if client ever boarded an elevator
         self.reorder = False # if client switched elevator, value will be true
